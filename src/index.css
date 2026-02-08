@@ -1,0 +1,227 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Core brand colors - Trust blue palette */
+    --background: 210 20% 98%;
+    --foreground: 215 25% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 15%;
+
+    /* Primary - Deep trust blue */
+    --primary: 215 90% 35%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Soft slate */
+    --secondary: 210 15% 92%;
+    --secondary-foreground: 215 25% 25%;
+
+    --muted: 210 15% 95%;
+    --muted-foreground: 215 15% 45%;
+
+    --accent: 210 20% 90%;
+    --accent-foreground: 215 25% 20%;
+
+    /* Semantic colors */
+    --destructive: 0 75% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Urgency colors */
+    --critical: 0 85% 55%;
+    --critical-foreground: 0 0% 100%;
+    
+    --high-urgency: 25 95% 50%;
+    --high-urgency-foreground: 0 0% 100%;
+    
+    --medium-urgency: 45 95% 50%;
+    --medium-urgency-foreground: 215 25% 15%;
+    
+    --low-urgency: 145 60% 42%;
+    --low-urgency-foreground: 0 0% 100%;
+
+    /* Status colors */
+    --success: 145 60% 42%;
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 40 95% 50%;
+    --warning-foreground: 215 25% 15%;
+    
+    --info: 200 85% 50%;
+    --info-foreground: 0 0% 100%;
+
+    /* Trust indicators */
+    --verified: 145 60% 42%;
+    --pending: 40 95% 50%;
+    --unverified: 215 15% 60%;
+
+    --border: 214 20% 88%;
+    --input: 214 20% 88%;
+    --ring: 215 90% 35%;
+
+    --radius: 0.625rem;
+
+    /* Sidebar */
+    --sidebar-background: 215 25% 18%;
+    --sidebar-foreground: 210 20% 95%;
+    --sidebar-primary: 200 85% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 25% 25%;
+    --sidebar-accent-foreground: 210 20% 95%;
+    --sidebar-border: 215 25% 25%;
+    --sidebar-ring: 200 85% 60%;
+
+    /* Custom gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(215 90% 35%) 0%, hsl(200 85% 45%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(210 20% 98%) 100%);
+    --gradient-urgent: linear-gradient(135deg, hsl(0 85% 55%) 0%, hsl(25 95% 50%) 100%);
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(215 25% 15% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(215 25% 15% / 0.08), 0 2px 4px -2px hsl(215 25% 15% / 0.05);
+    --shadow-lg: 0 10px 15px -3px hsl(215 25% 15% / 0.1), 0 4px 6px -4px hsl(215 25% 15% / 0.05);
+    --shadow-xl: 0 20px 25px -5px hsl(215 25% 15% / 0.1), 0 8px 10px -6px hsl(215 25% 15% / 0.05);
+  }
+
+  .dark {
+    --background: 215 25% 10%;
+    --foreground: 210 20% 95%;
+
+    --card: 215 25% 13%;
+    --card-foreground: 210 20% 95%;
+
+    --popover: 215 25% 13%;
+    --popover-foreground: 210 20% 95%;
+
+    --primary: 200 85% 55%;
+    --primary-foreground: 215 25% 10%;
+
+    --secondary: 215 25% 20%;
+    --secondary-foreground: 210 20% 90%;
+
+    --muted: 215 25% 18%;
+    --muted-foreground: 210 15% 60%;
+
+    --accent: 215 25% 22%;
+    --accent-foreground: 210 20% 95%;
+
+    --destructive: 0 65% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 215 25% 22%;
+    --input: 215 25% 22%;
+    --ring: 200 85% 55%;
+
+    --sidebar-background: 215 30% 8%;
+    --sidebar-foreground: 210 20% 95%;
+    --sidebar-primary: 200 85% 55%;
+    --sidebar-primary-foreground: 215 25% 10%;
+    --sidebar-accent: 215 25% 15%;
+    --sidebar-accent-foreground: 210 20% 95%;
+    --sidebar-border: 215 25% 18%;
+    --sidebar-ring: 200 85% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  .urgency-critical {
+    @apply bg-critical text-critical-foreground;
+  }
+  
+  .urgency-high {
+    @apply bg-high-urgency text-high-urgency-foreground;
+  }
+  
+  .urgency-medium {
+    @apply bg-medium-urgency text-medium-urgency-foreground;
+  }
+  
+  .urgency-low {
+    @apply bg-low-urgency text-low-urgency-foreground;
+  }
+
+  .card-elevated {
+    @apply bg-card rounded-lg shadow-md border border-border/50;
+  }
+
+  .badge-verified {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-success/10 text-success;
+  }
+
+  .badge-pending {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-warning/10 text-warning;
+  }
+
+  .stat-card {
+    @apply p-4 rounded-xl bg-card border border-border/50 shadow-sm hover:shadow-md transition-shadow;
+  }
+
+  .nav-link {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors;
+  }
+
+  .nav-link-active {
+    @apply bg-primary/10 text-primary font-medium;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-hero);
+  }
+
+  .bg-hero-gradient {
+    background-image: var(--gradient-hero);
+  }
+
+  .shadow-elevated {
+    box-shadow: var(--shadow-lg);
+  }
+
+  .animate-pulse-soft {
+    animation: pulse-soft 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-soft {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.4s ease-out;
+  }
+
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
