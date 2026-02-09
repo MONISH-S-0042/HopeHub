@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import RequestResource from "./pages/RequestResource";
 import DonateResource from "./pages/DonateResource";
 import BrowseRequests from "./pages/BrowseRequests";
+import DonateToRequest from "./pages/DonateToRequest";
 import Organizations from "./pages/Organizations";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/request" element={<RequestResource />} />
             <Route path="/donate" element={<DonateResource />} />
+            <Route path="/donate-to/:requestId" element={<DonateToRequest />} />
             <Route path="/browse" element={<BrowseRequests />} />
             <Route path="/organizations" element={<Organizations />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

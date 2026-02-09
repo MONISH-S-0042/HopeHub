@@ -12,9 +12,10 @@ import { formatDistanceToNow } from 'date-fns';
 interface RequestCardProps {
   request: ResourceRequest;
   showDonateButton?: boolean;
+  onViewDonations?: (requestId: string, resourceName: string) => void;
 }
 
-export function RequestCard({ request, showDonateButton = true }: RequestCardProps) {
+export function RequestCard({ request, showDonateButton = true, onViewDonations }: RequestCardProps) {
   const timeLeft = formatDistanceToNow(new Date(request.neededBy), { addSuffix: true });
 
   return (
@@ -43,9 +44,9 @@ export function RequestCard({ request, showDonateButton = true }: RequestCardPro
           <StatusBadge status={request.status} size="sm" />
         </div>
 
-        <ProgressBar 
-          current={request.fulfilledQuantity} 
-          total={request.quantity} 
+        <ProgressBar
+          current={request.fulfilledQuantity}
+          total={request.quantity}
           size="sm"
         />
 
@@ -79,10 +80,22 @@ export function RequestCard({ request, showDonateButton = true }: RequestCardPro
           </div>
           {showDonateButton && request.status === 'active' && (
             <Button size="sm" className="group-hover:translate-x-0.5 transition-transform" asChild>
-              <Link to={`/donate?requestId=${request.id}`}>
+              <Link to={`/donate-to/${request.id}`}>
                 Donate
                 <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
+            </Button>
+          )}
+
+          {!showDonateButton && request.fulfilledQuantity > 0 && onViewDonations && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="group-hover:translate-x-0.5 transition-transform border-primary/50 text-primary hover:bg-primary/5"
+              onClick={() => onViewDonations(request.id, request.specificResource)}
+            >
+              View Donations
+              <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           )}
         </div>

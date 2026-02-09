@@ -22,6 +22,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { NotificationCenter } from '@/components/common/NotificationCenter';
 
 export function Header() {
   const { user, logout } = useAuth();
@@ -113,12 +114,7 @@ export function Header() {
         <div className="flex items-center gap-3">
           {user ? (
             <>
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-critical text-[10px] font-medium text-critical-foreground">
-                  3
-                </span>
-              </Button>
+              <NotificationCenter />
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

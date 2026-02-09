@@ -12,6 +12,8 @@ const { mockDonations, mockOrganizations, mockPOCs } = require('./mockData');
 const passportConfig = require('./passportConfig');
 const User = require('./models/User');
 const Request = require('./models/Request');
+const Donation = require('./models/Donation');
+const Notification = require('./models/Notification');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -247,6 +249,83 @@ app.post('/api/requests/:id/reject', async (req, res) => {
   }
 });
 
+// User donates to a specific request
+app.post('/api/requests/:id/donate', async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Authentication required' });
+    const { id } = req.params;
+    const { quantity, pickupAddress, district, state } = req.body;
+
+    const reqDoc = await Request.findById(id);
+    if (!reqDoc) return res.status(404).json({ message: 'Request not found' });
+
+    const qty = Number(quantity);
+    if (isNaN(qty) || qty <= 0) return res.status(400).json({ message: 'Invalid quantity' });
+
+    const donation = new Donation({
+      requestId: id,
+      donorId: req.user._id,
+      donorName: req.user.name,
+      donorType: req.user.type,
+      quantity: qty,
+      unit: reqDoc.unit,
+      pickupAddress,
+      district: district || req.user.district,
+      state: state || req.user.state,
+      status: 'completed' // For now, assume instant completion of intent
+    });
+
+    await donation.save();
+
+    // Update request fulfillment
+    reqDoc.fulfilledQuantity = (reqDoc.fulfilledQuantity || 0) + qty;
+    if (reqDoc.fulfilledQuantity >= reqDoc.quantity) {
+      reqDoc.status = 'matched';
+    }
+
+    // Track matching donations in the request too
+    if (!reqDoc.matchedDonations) reqDoc.matchedDonations = [];
+    reqDoc.matchedDonations.push(donation._id);
+
+    await reqDoc.save();
+
+    // Create notification for requester
+    try {
+      const isFull = reqDoc.fulfilledQuantity >= reqDoc.quantity;
+      await new Notification({
+        userId: reqDoc.userId,
+        title: isFull ? 'Request Fulfilled!' : 'New Donation Received',
+        message: isFull
+          ? `Your request for ${reqDoc.quantity} ${reqDoc.unit} of ${reqDoc.specificResource} has been fully matched!`
+          : `Someone donated ${qty} ${reqDoc.unit} towards your request for ${reqDoc.specificResource}.`,
+        type: isFull ? 'fulfillment' : 'donation',
+        link: `/dashboard`
+      }).save();
+    } catch (notifErr) {
+      console.error('Failed to create notification', notifErr);
+      // Don't fail the donation if notification fails
+    }
+
+    res.status(201).json({ donation, request: reqDoc });
+  } catch (err) {
+    console.error('Donation error', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get donations for a specific request
+app.get('/api/requests/:id/donations', async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Authentication required' });
+    const { id } = req.params;
+    const donations = await Donation.find({ requestId: id }).sort({ createdAt: -1 }).lean();
+    res.json(donations);
+  } catch (err) {
+    console.error('Fetch request donations error', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Get logged-in user's own requests
 app.get('/api/requests/mine', async (req, res) => {
   try {
@@ -297,6 +376,30 @@ app.get('/api/stats/categories', async (req, res) => {
     res.json(stats);
   } catch (err) {
     console.error('Error computing category stats', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Notifications
+app.get('/api/notifications', async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Authentication required' });
+    const notifs = await Notification.find({ userId: req.user._id }).sort({ createdAt: -1 }).limit(20).lean();
+    res.json(notifs);
+  } catch (err) {
+    console.error('Fetch notifications error', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.post('/api/notifications/:id/read', async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Authentication required' });
+    const { id } = req.params;
+    await Notification.findOneAndUpdate({ _id: id, userId: req.user._id }, { isRead: true });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Mark read error', err);
     res.status(500).json({ message: 'Server error' });
   }
 });

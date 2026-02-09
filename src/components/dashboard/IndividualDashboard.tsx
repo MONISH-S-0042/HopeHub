@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatCard } from '@/components/cards/StatCard';
 import { RequestCard } from '@/components/cards/RequestCard';
+import { DonationDetailsModal } from '@/components/modals/DonationDetailsModal';
 import { useEffect, useState } from 'react';
 import {
   AlertTriangle,
@@ -21,6 +22,17 @@ export function IndividualDashboard() {
 
   const [myRequests, setMyRequests] = useState<any[]>([]);
   const [nearbyUrgentRequests, setNearbyUrgentRequests] = useState<any[]>([]);
+
+  // Donation details modal state
+  const [donationModalOpen, setDonationModalOpen] = useState(false);
+  const [donationRequestId, setDonationRequestId] = useState<string | null>(null);
+  const [donationResourceName, setDonationResourceName] = useState('');
+
+  const handleViewDonations = (id: string, name: string) => {
+    setDonationRequestId(id);
+    setDonationResourceName(name);
+    setDonationModalOpen(true);
+  };
 
   useEffect(() => {
     async function load() {
@@ -174,7 +186,12 @@ export function IndividualDashboard() {
         {myRequests.length > 0 ? (
           <div className="grid md:grid-cols-2 gap-4">
             {myRequests.map(request => (
-              <RequestCard key={request.id} request={request} showDonateButton={false} />
+              <RequestCard
+                key={request.id}
+                request={request}
+                showDonateButton={false}
+                onViewDonations={handleViewDonations}
+              />
             ))}
           </div>
         ) : (
@@ -217,6 +234,13 @@ export function IndividualDashboard() {
           ))}
         </div>
       </div>
+
+      <DonationDetailsModal
+        isOpen={donationModalOpen}
+        onClose={() => setDonationModalOpen(false)}
+        requestId={donationRequestId}
+        resourceName={donationResourceName}
+      />
     </div>
   );
 }
