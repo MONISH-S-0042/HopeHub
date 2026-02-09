@@ -22,14 +22,18 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 export function POCDashboard() {
   const { user } = useAuth();
 
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
   const [urgencyStats, setUrgencyStats] = useState<any>({ critical: 0, high: 0, medium: 0, low: 0 });
   const [totalActive, setTotalActive] = useState<number>(0);
   const [recentCritical, setRecentCritical] = useState<any[]>([]);
+  const { toast } = useToast();
 
   useEffect(() => {
     const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
@@ -41,10 +45,11 @@ export function POCDashboard() {
         ]);
         const requests = await requestsRes.json();
         const urgency = await urgencyRes.json();
-        setPendingApprovals(requests.filter((r: any) => r.status === 'pending-verification'));
+        const normalized = (requests || []).map((r:any)=>({ ...r, id: r.id || r._id }));
+        setPendingApprovals(normalized.filter((r: any) => r.status === 'pending-verification'));
         setUrgencyStats(urgency);
         setTotalActive(Object.values(urgency).reduce((a: number, b: number) => a + b, 0));
-        setRecentCritical(requests.filter((r: any) => r.urgency === 'critical').slice(0,3).map((r:any)=>({...r, id: r.id || r._id})));
+        setRecentCritical(normalized.filter((r: any) => r.urgency === 'critical').slice(0,3));
       } catch (err) {
         console.error('Failed to load POC data', err);
         setPendingApprovals([]);
@@ -55,6 +60,35 @@ export function POCDashboard() {
     }
     load();
   }, []);
+
+  const apiBase = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
+
+  async function approveRequest(id: string) {
+    try {
+      const res = await fetch(`${apiBase}/api/requests/${id}/approve`, { method: 'POST', credentials: 'include' });
+      if (!res.ok) throw new Error('Approve failed');
+      const updated = await res.json();
+      setPendingApprovals(prev => prev.filter(p => String(p.id || p._id) !== String(id)));
+      setSelectedRequest(null);
+      toast({ title: 'Request approved', description: 'The request is now active and visible to responders.' });
+    } catch (err) {
+      console.error('Approve error', err);
+      toast({ title: 'Approve failed', description: 'Unable to approve request.', variant: 'destructive' });
+    }
+  }
+
+  async function rejectRequest(id: string) {
+    try {
+      const res = await fetch(`${apiBase}/api/requests/${id}/reject`, { method: 'POST', credentials: 'include' });
+      if (!res.ok) throw new Error('Reject failed');
+      setPendingApprovals(prev => prev.filter(p => String(p.id || p._id) !== String(id)));
+      setSelectedRequest(null);
+      toast({ title: 'Request rejected', description: 'The request has been removed.' });
+    } catch (err) {
+      console.error('Reject error', err);
+      toast({ title: 'Reject failed', description: 'Unable to reject request.', variant: 'destructive' });
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -84,6 +118,42 @@ export function POCDashboard() {
           </Button>
         </div>
       </div>
+
+      {/* Detail Dialog for selected request */}
+      <Dialog open={!!selectedRequest} onOpenChange={(open) => { if (!open) setSelectedRequest(null); }}>
+        {selectedRequest && (
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Request Details</DialogTitle>
+              <DialogDescription>Review the request before approving or rejecting.</DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 mt-4">
+              <div className="text-sm text-muted-foreground">Requested by: <strong>{selectedRequest.userName}</strong> ({selectedRequest.userType})</div>
+              <div className="text-sm">Resource: <strong>{selectedRequest.quantity} {selectedRequest.unit} of {selectedRequest.specificResource}</strong></div>
+              <div className="text-sm">Category: <strong>{selectedRequest.category}</strong></div>
+              <div className="text-sm">Urgency: <strong>{selectedRequest.urgency}</strong></div>
+              <div className="text-sm">Needed By: <strong>{selectedRequest.neededBy ? new Date(selectedRequest.neededBy).toLocaleString() : 'N/A'}</strong></div>
+              <div className="text-sm">Location: <strong>{selectedRequest.address || ''} {selectedRequest.landmark ? '• ' + selectedRequest.landmark : ''}</strong></div>
+              <div className="text-sm">District / State: <strong>{selectedRequest.district}, {selectedRequest.state}</strong></div>
+              <div className="text-sm">People Affected: <strong>{selectedRequest.peopleAffected || 'N/A'}</strong></div>
+              <div className="text-sm">Delivery Preference: <strong>{selectedRequest.deliveryPreference || 'N/A'}</strong></div>
+              {selectedRequest.specialRequirements && (
+                <div className="text-sm italic text-muted-foreground">Special: {selectedRequest.specialRequirements}</div>
+              )}
+              {selectedRequest.assignedPOC && (
+                <div className="text-sm">Assigned POC: <strong>{selectedRequest.assignedPOC.name} ({selectedRequest.assignedPOC.email})</strong></div>
+              )}
+            </div>
+
+            <DialogFooter className="mt-6">
+              <Button variant="outline" onClick={() => { if (selectedRequest) rejectRequest(selectedRequest.id || selectedRequest._id); }}>Reject</Button>
+              <Button className="bg-success" onClick={() => { if (selectedRequest) approveRequest(selectedRequest.id || selectedRequest._id); }}>Approve</Button>
+            </DialogFooter>
+            <DialogClose />
+          </DialogContent>
+        )}
+      </Dialog>
 
       {/* Alert Banner */}
       {pendingApprovals.length > 0 && (
@@ -252,7 +322,7 @@ export function POCDashboard() {
               <Card key={request.id} className="card-elevated">
                 <CardContent className="pt-6">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex-1">
+                    <div className="flex-1 cursor-pointer" onClick={() => setSelectedRequest(request)}>
                       <div className="flex items-center gap-3 mb-2">
                         <Badge className="urgency-medium text-xs">{request.urgency}</Badge>
                         <span className="text-sm text-muted-foreground">
@@ -279,11 +349,11 @@ export function POCDashboard() {
                       )}
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => setSelectedRequest(request)}>
                         <XCircle className="mr-2 h-4 w-4" />
-                        Reject
+                        Review
                       </Button>
-                      <Button size="sm" className="bg-success hover:bg-success/90">
+                      <Button size="sm" className="bg-success hover:bg-success/90" onClick={() => approveRequest(request.id || request._id)}>
                         <CheckCircle className="mr-2 h-4 w-4" />
                         Approve
                       </Button>
@@ -310,12 +380,6 @@ export function POCDashboard() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Recent Critical Requests</h2>
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/browse">
-              <MapPin className="mr-1 h-4 w-4" />
-              Map View
-            </Link>
-          </Button>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">

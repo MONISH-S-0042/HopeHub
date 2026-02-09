@@ -43,7 +43,7 @@ app.use(passport.session());
 // Auth routes
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { name, email, password, type, phone } = req.body;
+    const { name, email, password, type, phone, district, state } = req.body;
     if (!email || !password || !name) return res.status(400).json({ message: 'Missing fields' });
     if (typeof password !== 'string' || password.length < 6) return res.status(400).json({ message: 'Password too short' });
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -54,7 +54,7 @@ app.post('/api/auth/register', async (req, res) => {
     }
     const exists = await User.findOne({ email });
     if (exists) return res.status(409).json({ message: 'Email already registered' });
-    const user = new User({ name, email, type, phone });
+    const user = new User({ name, email, type, phone, district, state });
     await user.setPassword(password);
     await user.save();
     req.login(user, err => {
@@ -144,6 +144,36 @@ app.post('/api/requests', async (req, res) => {
       if (isNaN(neededDate.getTime())) return res.status(400).json({ message: 'Invalid neededBy date' });
     }
 
+    // Determine if this request should be held for POC verification
+    const sensitiveKeywords = ['cash', 'money', 'fund', 'finance', 'donation', 'loan'];
+    const lowerSpec = String(specificResource || '').toLowerCase();
+    const isSensitive = sensitiveKeywords.some(k => lowerSpec.includes(k));
+
+    const thresholds = {
+      'food-nutrition': 500,
+      'medical-healthcare': 50,
+      'shelter-clothing': 200,
+      'water-sanitation': 1000,
+      'rescue-safety': 50,
+      'transportation-fuel': 500,
+      'communication-equipment': 20,
+      other: 10,
+    };
+    const threshold = thresholds[category] ?? 100;
+    const isUnreasonableAmount = qty > threshold;
+
+    let status = 'active';
+    let assignedPOC = undefined;
+
+    if (isSensitive || isUnreasonableAmount) {
+      status = 'pending-verification';
+      // assign a POC only when there's an exact district match (no state fallback)
+      const pocByDistrict = mockPOCs.find(p => p.district && p.district.toLowerCase() === String(district || '').toLowerCase());
+      if (pocByDistrict) {
+        assignedPOC = { id: pocByDistrict.id, name: pocByDistrict.name, email: pocByDistrict.email };
+      }
+    }
+
     const newReq = new Request({
       userId: req.user._id,
       userName: req.user.name,
@@ -162,12 +192,64 @@ app.post('/api/requests', async (req, res) => {
       deliveryPreference,
       peopleAffected,
       specialRequirements,
+      status,
+      assignedPOC,
+      notifiedPOC: assignedPOC ? false : true,
     });
 
     await newReq.save();
     res.status(201).json(newReq);
   } catch (err) {
     console.error('Error creating request', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// POC approves a pending request
+app.post('/api/requests/:id/approve', async (req, res) => {
+  try {
+    if (!req.user || req.user.type !== 'poc') return res.status(403).json({ message: 'POC access required' });
+    const { id } = req.params;
+    const reqDoc = await Request.findById(id);
+    if (!reqDoc) return res.status(404).json({ message: 'Request not found' });
+    if (reqDoc.status !== 'pending-verification') return res.status(400).json({ message: 'Request not pending verification' });
+    // Ensure the logged-in POC is the assigned POC for this request
+    if (!reqDoc.assignedPOC || !req.user.email || req.user.email.toLowerCase() !== String(reqDoc.assignedPOC.email || '').toLowerCase()) {
+      return res.status(403).json({ message: 'Not authorized to approve this request' });
+    }
+    reqDoc.status = 'active';
+    reqDoc.notifiedPOC = true;
+    reqDoc.verifiedBy = { id: req.user._id, name: req.user.name, email: req.user.email };
+    reqDoc.verifiedAt = new Date();
+    await reqDoc.save();
+    res.json(reqDoc);
+  } catch (err) {
+    console.error('Approve error', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// POC rejects (removes) a pending request
+app.post('/api/requests/:id/reject', async (req, res) => {
+  try {
+    if (!req.user || req.user.type !== 'poc') return res.status(403).json({ message: 'POC access required' });
+    const { id } = req.params;
+    const reqDoc = await Request.findById(id);
+    if (!reqDoc) return res.status(404).json({ message: 'Request not found' });
+    if (reqDoc.status !== 'pending-verification') return res.status(400).json({ message: 'Request not pending verification' });
+    // Ensure the logged-in POC is the assigned POC for this request
+    if (!reqDoc.assignedPOC || !req.user.email || req.user.email.toLowerCase() !== String(reqDoc.assignedPOC.email || '').toLowerCase()) {
+      return res.status(403).json({ message: 'Not authorized to reject this request' });
+    }
+    const { reason } = req.body || {};
+    reqDoc.status = 'rejected';
+    if (reason) reqDoc.rejectionReason = reason;
+    reqDoc.verifiedBy = { id: req.user._id, name: req.user.name, email: req.user.email };
+    reqDoc.verifiedAt = new Date();
+    await reqDoc.save();
+    res.json(reqDoc);
+  } catch (err) {
+    console.error('Reject error', err);
     res.status(500).json({ message: 'Server error' });
   }
 });

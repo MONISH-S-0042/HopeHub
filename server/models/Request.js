@@ -24,6 +24,13 @@ const RequestSchema = new mongoose.Schema({
   status: { type: String, enum: ['active', 'pending-verification', 'matched', 'fulfilled', 'cancelled'], default: 'active' },
   fulfilledQuantity: { type: Number, default: 0 },
   matchedDonations: [{ type: String }],
+  assignedPOC: {
+    id: String,
+    name: String,
+    email: String,
+  },
+  notifiedPOC: { type: Boolean, default: false },
+  rejectionReason: String,
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

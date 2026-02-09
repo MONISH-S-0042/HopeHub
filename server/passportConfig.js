@@ -29,12 +29,13 @@ module.exports = function (passport) {
     done(null, user.id);
   });
 
-  passport.deserializeUser(async (id, done) => {
-    try {
-      const user = await User.findById(id).select('-passwordHash');
-      done(null, user);
-    } catch (err) {
-      done(err);
-    }
-  });
+ passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await User.findById(id).lean();
+    done(null, user);
+  } catch (err) {
+    done(err);
+  }
+});
+
 };
