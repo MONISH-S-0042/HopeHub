@@ -21,7 +21,7 @@ const RequestSchema = new mongoose.Schema({
   deliveryPreference: { type: String, enum: ['delivery', 'pickup', 'either'], default: 'either' },
   peopleAffected: Number,
   specialRequirements: String,
-  status: { type: String, enum: ['active', 'pending-verification', 'matched', 'fulfilled', 'cancelled'], default: 'active' },
+  status: { type: String, enum: ['active', 'pending-verification', 'matched', 'fulfilled', 'cancelled', 'rejected'], default: 'active' },
   fulfilledQuantity: { type: Number, default: 0 },
   matchedDonations: [{ type: String }],
   assignedPOC: {

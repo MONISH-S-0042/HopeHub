@@ -92,12 +92,14 @@ export function Header() {
                   </Link>
                 </>
               )}
-              <Link
-                to="/browse"
-                className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Browse Requests
-              </Link>
+              {user.type !== 'poc' && (
+                <Link
+                  to="/browse"
+                  className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Browse Requests
+                </Link>
+              )}
               <Link
                 to="/organizations"
                 className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
@@ -213,13 +215,15 @@ export function Header() {
                 </Link>
               </>
             )}
-            <Link
-              to="/browse"
-              className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Browse Requests
-            </Link>
+            {user.type !== 'poc' && (
+              <Link
+                to="/browse"
+                className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Browse Requests
+              </Link>
+            )}
             <Link
               to="/organizations"
               className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"

@@ -13,10 +13,10 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { UrgencyBadge } from '@/components/common/UrgencyBadge';
 import { ProgressBar } from '@/components/common/ProgressBar';
-import { 
-  HeartHandshake, 
-  MapPin, 
-  Package, 
+import {
+  HeartHandshake,
+  MapPin,
+  Package,
   Truck,
   Upload,
   Loader2,
@@ -31,7 +31,7 @@ import { formatDistanceToNow } from 'date-fns';
 export default function DonateResource() {
   const [searchParams] = useSearchParams();
   const requestId = searchParams.get('requestId');
-  
+
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -68,13 +68,12 @@ export default function DonateResource() {
 
   // Get matching requests from server
   useEffect(() => {
-    const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
     async function loadMatches() {
       try {
-        const res = await fetch(`${API_BASE}/api/requests`, { credentials: 'include' });
+        const res = await fetch(`/api/requests`, { credentials: 'include' });
         const data = await res.json();
         const normalize = (r: any) => ({ ...r, id: r.id || r._id });
-        const matches = (data || []).filter((r: any) => r.status === 'active' && (formData.category ? r.category === formData.category : true)).slice(0,5).map(normalize);
+        const matches = (data || []).filter((r: any) => r.status === 'active' && (formData.category ? r.category === formData.category : true)).slice(0, 5).map(normalize);
         setMatchingRequests(matches);
       } catch (err) {
         console.error('Failed to load matching requests', err);
@@ -101,7 +100,7 @@ export default function DonateResource() {
   const handleDonateToRequest = async (requestId: string) => {
     setIsSubmitting(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     toast({
       title: 'Donation Matched!',
       description: 'You have been matched with the requester. Coordinate delivery next.',
@@ -229,11 +228,10 @@ export default function DonateResource() {
                       {RESOURCE_CATEGORIES.map((cat) => (
                         <div
                           key={cat.value}
-                          className={`p-3 rounded-lg border-2 cursor-pointer transition-all text-center ${
-                            formData.category === cat.value
+                          className={`p-3 rounded-lg border-2 cursor-pointer transition-all text-center ${formData.category === cat.value
                               ? 'border-primary bg-primary/5'
                               : 'border-border hover:border-primary/50'
-                          }`}
+                            }`}
                           onClick={() => {
                             updateFormData('category', cat.value);
                             setShowMatches(true);
@@ -427,8 +425,8 @@ export default function DonateResource() {
                           <MapPin className="h-3 w-3" />
                           {request.district}
                         </div>
-                        <ProgressBar 
-                          current={request.fulfilledQuantity} 
+                        <ProgressBar
+                          current={request.fulfilledQuantity}
                           total={request.quantity}
                           size="sm"
                           showLabel={false}
@@ -438,8 +436,8 @@ export default function DonateResource() {
                             <Users className="h-3 w-3 inline mr-1" />
                             {request.peopleAffected} people
                           </span>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="outline"
                             onClick={() => handleDonateToRequest(request.id)}
                             disabled={isSubmitting}

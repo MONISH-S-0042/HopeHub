@@ -5,9 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { StatCard } from '@/components/cards/StatCard';
 import { RequestCard } from '@/components/cards/RequestCard';
 import { useEffect, useState } from 'react';
-import { 
-  AlertTriangle, 
-  CheckCircle, 
+import {
+  AlertTriangle,
+  CheckCircle,
   XCircle,
   Clock,
   MapPin,
@@ -36,20 +36,19 @@ export function POCDashboard() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
     async function load() {
       try {
         const [requestsRes, urgencyRes] = await Promise.all([
-          fetch(`${API_BASE}/api/requests`, { credentials: 'include' }),
-          fetch(`${API_BASE}/api/stats/urgency`),
+          fetch(`/api/requests`, { credentials: 'include' }),
+          fetch(`/api/stats/urgency`),
         ]);
         const requests = await requestsRes.json();
         const urgency = await urgencyRes.json();
-        const normalized = (requests || []).map((r:any)=>({ ...r, id: r.id || r._id }));
+        const normalized = (requests || []).map((r: any) => ({ ...r, id: r.id || r._id }));
         setPendingApprovals(normalized.filter((r: any) => r.status === 'pending-verification'));
         setUrgencyStats(urgency);
-        setTotalActive(Object.values(urgency).reduce((a: number, b: number) => a + b, 0));
-        setRecentCritical(normalized.filter((r: any) => r.urgency === 'critical').slice(0,3));
+        setTotalActive(Object.values(urgency as Record<string, number>).reduce((a: number, b: number) => a + b, 0));
+        setRecentCritical(normalized.filter((r: any) => r.urgency === 'critical').slice(0, 3));
       } catch (err) {
         console.error('Failed to load POC data', err);
         setPendingApprovals([]);
@@ -61,11 +60,9 @@ export function POCDashboard() {
     load();
   }, []);
 
-  const apiBase = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
-
   async function approveRequest(id: string) {
     try {
-      const res = await fetch(`${apiBase}/api/requests/${id}/approve`, { method: 'POST', credentials: 'include' });
+      const res = await fetch(`/api/requests/${id}/approve`, { method: 'POST', credentials: 'include' });
       if (!res.ok) throw new Error('Approve failed');
       const updated = await res.json();
       setPendingApprovals(prev => prev.filter(p => String(p.id || p._id) !== String(id)));
@@ -79,7 +76,7 @@ export function POCDashboard() {
 
   async function rejectRequest(id: string) {
     try {
-      const res = await fetch(`${apiBase}/api/requests/${id}/reject`, { method: 'POST', credentials: 'include' });
+      const res = await fetch(`/api/requests/${id}/reject`, { method: 'POST', credentials: 'include' });
       if (!res.ok) throw new Error('Reject failed');
       setPendingApprovals(prev => prev.filter(p => String(p.id || p._id) !== String(id)));
       setSelectedRequest(null);

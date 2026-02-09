@@ -1,4 +1,5 @@
 require('dotenv').config();
+// Server initialization
 const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
@@ -212,11 +213,7 @@ app.post('/api/requests/:id/approve', async (req, res) => {
     const { id } = req.params;
     const reqDoc = await Request.findById(id);
     if (!reqDoc) return res.status(404).json({ message: 'Request not found' });
-    if (reqDoc.status !== 'pending-verification') return res.status(400).json({ message: 'Request not pending verification' });
-    // Ensure the logged-in POC is the assigned POC for this request
-    if (!reqDoc.assignedPOC || !req.user.email || req.user.email.toLowerCase() !== String(reqDoc.assignedPOC.email || '').toLowerCase()) {
-      return res.status(403).json({ message: 'Not authorized to approve this request' });
-    }
+
     reqDoc.status = 'active';
     reqDoc.notifiedPOC = true;
     reqDoc.verifiedBy = { id: req.user._id, name: req.user.name, email: req.user.email };
@@ -236,11 +233,7 @@ app.post('/api/requests/:id/reject', async (req, res) => {
     const { id } = req.params;
     const reqDoc = await Request.findById(id);
     if (!reqDoc) return res.status(404).json({ message: 'Request not found' });
-    if (reqDoc.status !== 'pending-verification') return res.status(400).json({ message: 'Request not pending verification' });
-    // Ensure the logged-in POC is the assigned POC for this request
-    if (!reqDoc.assignedPOC || !req.user.email || req.user.email.toLowerCase() !== String(reqDoc.assignedPOC.email || '').toLowerCase()) {
-      return res.status(403).json({ message: 'Not authorized to reject this request' });
-    }
+
     const { reason } = req.body || {};
     reqDoc.status = 'rejected';
     if (reason) reqDoc.rejectionReason = reason;

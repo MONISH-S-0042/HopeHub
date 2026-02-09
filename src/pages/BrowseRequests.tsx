@@ -9,10 +9,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Search, 
-  MapPin, 
-  List, 
+import {
+  Search,
+  MapPin,
+  List,
   Filter,
   X,
   AlertTriangle
@@ -45,10 +45,9 @@ export default function BrowseRequests() {
 
   // Fetch live requests from server
   useEffect(() => {
-    const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
     async function load() {
       try {
-        const res = await fetch(`${API_BASE}/api/requests`, { credentials: 'include' });
+        const res = await fetch(`/api/requests`, { credentials: 'include' });
         const data = await res.json();
         const normalize = (r: any) => ({ ...r, id: r.id || r._id });
         setRequests((data || []).map(normalize));
@@ -214,7 +213,7 @@ export default function BrowseRequests() {
                   <MapPin className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
                   <h3 className="font-semibold text-lg mb-2">Map View</h3>
                   <p className="text-muted-foreground max-w-md">
-                    Interactive map showing request locations would be integrated here 
+                    Interactive map showing request locations would be integrated here
                     with pins colored by urgency level.
                   </p>
                 </div>

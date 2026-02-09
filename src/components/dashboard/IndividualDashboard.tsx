@@ -5,10 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { StatCard } from '@/components/cards/StatCard';
 import { RequestCard } from '@/components/cards/RequestCard';
 import { useEffect, useState } from 'react';
-import { 
-  AlertTriangle, 
-  HeartHandshake, 
-  Package, 
+import {
+  AlertTriangle,
+  HeartHandshake,
+  Package,
   MapPin,
   Clock,
   Star,
@@ -23,17 +23,16 @@ export function IndividualDashboard() {
   const [nearbyUrgentRequests, setNearbyUrgentRequests] = useState<any[]>([]);
 
   useEffect(() => {
-    const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
     async function load() {
       try {
         // fetch user's own requests for the "My Requests" section
-        const mineRes = await fetch(`${API_BASE}/api/requests/mine`, { credentials: 'include' });
+        const mineRes = await fetch(`/api/requests/mine`, { credentials: 'include' });
         const mineData = mineRes.ok ? await mineRes.json() : [];
         const normalize = (r: any) => ({ ...r, id: r.id || r._id });
         setMyRequests((mineData || []).map(normalize).slice(0, 4));
 
         // fetch public requests (server filters out your own)
-        const res = await fetch(`${API_BASE}/api/requests`, { credentials: 'include' });
+        const res = await fetch(`/api/requests`, { credentials: 'include' });
         const data = await res.json();
         const normalized = (data || []).map(normalize);
         setNearbyUrgentRequests(normalized.filter((r: any) => r.urgency === 'critical' || r.urgency === 'high').slice(0, 3));
@@ -121,7 +120,7 @@ export function IndividualDashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Need help? Submit a resource request with details about what you need, 
+              Need help? Submit a resource request with details about what you need,
               urgency level, and location. Donors nearby will be notified.
             </p>
             <Button className="w-full group-hover:bg-primary/90" asChild>
@@ -147,7 +146,7 @@ export function IndividualDashboard() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Have resources to share? List what you can donate and get matched 
+              Have resources to share? List what you can donate and get matched
               with people who need them based on proximity and urgency.
             </p>
             <Button variant="outline" className="w-full group-hover:bg-success group-hover:text-success-foreground group-hover:border-success" asChild>
@@ -171,7 +170,7 @@ export function IndividualDashboard() {
             </Link>
           </Button>
         </div>
-        
+
         {myRequests.length > 0 ? (
           <div className="grid md:grid-cols-2 gap-4">
             {myRequests.map(request => (

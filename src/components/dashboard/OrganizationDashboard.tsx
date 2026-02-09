@@ -5,10 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { StatCard } from '@/components/cards/StatCard';
 import { RequestCard } from '@/components/cards/RequestCard';
 import { useEffect, useState } from 'react';
-import { 
-  AlertTriangle, 
-  HeartHandshake, 
-  Package, 
+import {
+  AlertTriangle,
+  HeartHandshake,
+  Package,
   Users,
   Building2,
   Bell,
@@ -26,10 +26,9 @@ export function OrganizationDashboard() {
   const [matchedRequests, setMatchedRequests] = useState<any[]>([]);
 
   useEffect(() => {
-    const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
     async function load() {
       try {
-        const res = await fetch(`${API_BASE}/api/requests`, { credentials: 'include' });
+        const res = await fetch(`/api/requests`, { credentials: 'include' });
         const data = await res.json();
         setPendingHelpRequests(data.slice(0, 2));
         setMatchedRequests(data.filter((r: any) => r.status === 'matched'));
@@ -194,7 +193,7 @@ export function OrganizationDashboard() {
             </Link>
           </Button>
         </div>
-        
+
         <div className="grid md:grid-cols-2 gap-4">
           {pendingHelpRequests.map(request => (
             <RequestCard key={request.id} request={request} />

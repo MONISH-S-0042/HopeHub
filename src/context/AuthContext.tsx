@@ -4,7 +4,6 @@ import { User, UserType } from '@/types';
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string, userType: UserType) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   register: (userData: Partial<User> & { password: string }) => Promise<void>;
   logout: () => void;
@@ -20,10 +19,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
     async function check() {
       try {
-        const res = await fetch(`${API_BASE}/api/auth/user`, { credentials: 'include' });
+        const res = await fetch(`/api/auth/user`, { credentials: 'include' });
         if (res.ok) {
           const u = await res.json();
           setUser(u);
@@ -39,9 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
-    const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
     try {
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
+      const res = await fetch(`/api/auth/login`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -60,9 +57,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (userData: Partial<User> & { password: string }) => {
     setIsLoading(true);
-    const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
     try {
-      const res = await fetch(`${API_BASE}/api/auth/register`, {
+      const res = await fetch(`/api/auth/register`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -80,9 +76,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
     try {
-      await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+      await fetch(`/api/auth/logout`, { method: 'POST', credentials: 'include' });
     } catch (err) {
       console.error('Logout failed', err);
     }

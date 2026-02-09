@@ -13,11 +13,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  AlertTriangle, 
-  MapPin, 
-  Package, 
-  Users, 
+import {
+  AlertTriangle,
+  MapPin,
+  Package,
+  Users,
   Clock,
   Truck,
   Upload,
@@ -26,6 +26,17 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
+
+const THRESHOLDS: Record<string, number> = {
+  'food-nutrition': 500,
+  'medical-healthcare': 50,
+  'shelter-clothing': 200,
+  'water-sanitation': 1000,
+  'rescue-safety': 50,
+  'transportation-fuel': 500,
+  'communication-equipment': 20,
+  'other': 10,
+};
 
 export default function RequestResource() {
   const { user, isLoading: authLoading } = useAuth();
@@ -59,12 +70,18 @@ export default function RequestResource() {
     pingOrganizations: [] as string[],
   });
 
+  const isUnreasonable = () => {
+    if (!formData.category) return false;
+    const threshold = THRESHOLDS[formData.category] || 100;
+    return Number(formData.quantity) > threshold;
+  };
+
   const updateFormData = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     // client-side validations
     if (!formData.category) return toast({ title: 'Validation', description: 'Please select a resource category.' });
     if (!formData.specificResource) return toast({ title: 'Validation', description: 'Please enter the specific resource.' });
@@ -79,7 +96,6 @@ export default function RequestResource() {
         landmark: formData.landmark,
         district: formData.district,
         state: formData.state,
-        coordinates: formData.coordinates,
         category: formData.category,
         specificResource: formData.specificResource,
         quantity: qty,
@@ -113,10 +129,10 @@ export default function RequestResource() {
 
       const created = await res.json();
       toast({
-        title: 'Request Submitted!',
-        description: created.urgency === 'critical'
-          ? 'Your critical request has been auto-approved and is now visible to donors.'
-          : 'Your request has been created and will be visible shortly.',
+        title: created.status === 'pending-verification' ? 'Verification Required' : 'Request Submitted!',
+        description: created.status === 'pending-verification'
+          ? 'Your request exceeds standard limits and is pending POC verification.'
+          : 'Your request has been created and is now visible to donors.',
       });
       navigate('/dashboard');
     } catch (err) {
@@ -239,11 +255,10 @@ export default function RequestResource() {
           {RESOURCE_CATEGORIES.map((cat) => (
             <div
               key={cat.value}
-              className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                formData.category === cat.value
+              className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${formData.category === cat.value
                   ? 'border-primary bg-primary/5'
                   : 'border-border hover:border-primary/50'
-              }`}
+                }`}
               onClick={() => updateFormData('category', cat.value)}
             >
               <div className="text-2xl mb-2">{cat.icon}</div>
@@ -334,8 +349,8 @@ export default function RequestResource() {
         </div>
         <div className="space-y-2">
           <Label>Delivery Preference</Label>
-          <Select 
-            value={formData.deliveryPreference} 
+          <Select
+            value={formData.deliveryPreference}
             onValueChange={(v) => updateFormData('deliveryPreference', v)}
           >
             <SelectTrigger>
@@ -354,6 +369,13 @@ export default function RequestResource() {
 
   const renderStep3 = () => (
     <div className="space-y-6">
+      <div className="p-4 rounded-lg bg-warning/10 border border-warning/20 mb-6">
+        <p className="text-sm font-medium text-warning mb-1">Additional Verification Required</p>
+        <p className="text-xs text-muted-foreground">
+          Due to the large quantity requested, please provide additional context to help our POCs verify and approve your request faster.
+        </p>
+      </div>
+
       <div className="grid md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="peopleAffected">Number of People Affected</Label>
@@ -363,32 +385,21 @@ export default function RequestResource() {
             placeholder="How many people need this resource?"
             value={formData.peopleAffected}
             onChange={(e) => updateFormData('peopleAffected', e.target.value)}
+            required={isUnreasonable()}
           />
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="specialRequirements">Special Requirements (Optional)</Label>
+        <Label htmlFor="specialRequirements">Request Justification / Context</Label>
         <Textarea
           id="specialRequirements"
-          placeholder="Any specific requirements? e.g., Baby formula for 6-month-old, Insulin for diabetic patients"
+          placeholder="Please explain why this quantity is needed and any other relevant details."
           value={formData.specialRequirements}
           onChange={(e) => updateFormData('specialRequirements', e.target.value)}
-          rows={3}
+          rows={4}
+          required={isUnreasonable()}
         />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Upload Photo (Optional)</Label>
-        <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
-          <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">
-            Click to upload or drag and drop
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Photos help donors understand the situation better
-          </p>
-        </div>
       </div>
 
       <div className="space-y-3">
@@ -441,7 +452,9 @@ export default function RequestResource() {
             <h1 className="text-2xl md:text-3xl font-bold">Request a Resource</h1>
           </div>
           <p className="text-muted-foreground">
-            Fill in the details below to submit a resource request. Donors nearby will be notified.
+            {step < 3
+              ? 'Fill in the basic details of your request.'
+              : 'Provide verification details for your large quantity request.'}
           </p>
         </div>
 
@@ -450,18 +463,21 @@ export default function RequestResource() {
           {[
             { num: 1, label: 'Location', icon: MapPin },
             { num: 2, label: 'Resource', icon: Package },
-            { num: 3, label: 'Details', icon: Users },
-          ].map((s, i) => (
+            ...(isUnreasonable() ? [{ num: 3, label: 'Verification', icon: Users }] : []),
+          ].map((s, i, arr) => (
             <div key={s.num} className="flex items-center">
               <div
-                className={`flex items-center gap-2 px-4 py-2 rounded-full cursor-pointer transition-colors ${
-                  step === s.num
+                className={`flex items-center gap-2 px-4 py-2 rounded-full cursor-pointer transition-colors ${step === s.num
                     ? 'bg-primary text-primary-foreground'
                     : step > s.num
-                    ? 'bg-success/10 text-success'
-                    : 'bg-muted text-muted-foreground'
-                }`}
-                onClick={() => setStep(s.num)}
+                      ? 'bg-success/10 text-success'
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                onClick={() => {
+                  if (s.num < step || (s.num === 2 && step === 1) || (s.num === 3 && step === 2 && isUnreasonable())) {
+                    setStep(s.num);
+                  }
+                }}
               >
                 {step > s.num ? (
                   <CheckCircle className="h-4 w-4" />
@@ -471,7 +487,7 @@ export default function RequestResource() {
                 <span className="hidden sm:inline font-medium">{s.label}</span>
                 <span className="sm:hidden font-medium">{s.num}</span>
               </div>
-              {i < 2 && (
+              {i < arr.length - 1 && (
                 <div className={`w-8 md:w-16 h-0.5 mx-2 ${step > s.num ? 'bg-success' : 'bg-border'}`} />
               )}
             </div>
@@ -483,16 +499,16 @@ export default function RequestResource() {
             <CardTitle>
               {step === 1 && 'Your Location'}
               {step === 2 && 'Resource Details'}
-              {step === 3 && 'Additional Information'}
+              {step === 3 && 'Verification Details'}
             </CardTitle>
             <CardDescription>
               {step === 1 && 'Where should the resource be delivered?'}
               {step === 2 && 'What resource do you need?'}
-              {step === 3 && 'Help us understand your needs better'}
+              {step === 3 && 'Help us understand your large quantity request'}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={(e) => e.preventDefault()}>
               {step === 1 && renderStep1()}
               {step === 2 && renderStep2()}
               {step === 3 && renderStep3()}
@@ -505,24 +521,32 @@ export default function RequestResource() {
                 ) : (
                   <div />
                 )}
-                
-                {step < 3 ? (
-                  <Button type="button" onClick={() => setStep(step + 1)}>
+
+                {step === 1 && (
+                  <Button type="button" onClick={() => setStep(2)}>
                     Continue
                   </Button>
-                ) : (
-                  <Button type="submit" disabled={isSubmitting}>
+                )}
+
+                {step === 2 && (
+                  <Button
+                    type="button"
+                    onClick={() => isUnreasonable() ? setStep(3) : handleSubmit()}
+                    disabled={isSubmitting}
+                  >
                     {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      <>
-                        Submit Request
-                        <AlertTriangle className="ml-2 h-4 w-4" />
-                      </>
-                    )}
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    {isUnreasonable() ? 'Continue to Verification' : 'Submit Request'}
+                  </Button>
+                )}
+
+                {step === 3 && (
+                  <Button type="button" onClick={() => handleSubmit()} disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    Submit for Review
                   </Button>
                 )}
               </div>
@@ -530,7 +554,7 @@ export default function RequestResource() {
           </CardContent>
         </Card>
 
-        {formData.urgency === 'critical' && (
+        {formData.urgency === 'critical' && !isUnreasonable() && (
           <div className="mt-4 p-4 rounded-lg bg-success/10 border border-success/20 flex items-start gap-3">
             <CheckCircle className="h-5 w-5 text-success mt-0.5" />
             <div>
