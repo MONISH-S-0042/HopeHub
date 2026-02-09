@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatCard } from '@/components/cards/StatCard';
 import { RequestCard } from '@/components/cards/RequestCard';
+import { useEffect, useState } from 'react';
 import { mockRequests } from '@/data/mockData';
 import { 
   AlertTriangle, 
@@ -22,9 +23,25 @@ import { Badge } from '@/components/ui/badge';
 export function OrganizationDashboard() {
   const { user } = useAuth();
 
-  // Mock data
-  const pendingHelpRequests = mockRequests.slice(0, 2);
-  const matchedRequests = mockRequests.filter(r => r.status === 'matched');
+  const [pendingHelpRequests, setPendingHelpRequests] = useState<any[]>([]);
+  const [matchedRequests, setMatchedRequests] = useState<any[]>([]);
+
+  useEffect(() => {
+    const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
+    async function load() {
+      try {
+        const res = await fetch(`${API_BASE}/api/requests`);
+        const data = await res.json();
+        setPendingHelpRequests(data.slice(0, 2));
+        setMatchedRequests(data.filter((r: any) => r.status === 'matched'));
+      } catch (err) {
+        console.error('Failed to load requests', err);
+        setPendingHelpRequests(mockRequests.slice(0, 2));
+        setMatchedRequests(mockRequests.filter(r => r.status === 'matched'));
+      }
+    }
+    load();
+  }, []);
 
   return (
     <div className="space-y-8">

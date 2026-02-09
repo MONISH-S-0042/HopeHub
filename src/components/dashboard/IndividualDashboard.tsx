@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatCard } from '@/components/cards/StatCard';
 import { RequestCard } from '@/components/cards/RequestCard';
+import { useEffect, useState } from 'react';
 import { mockRequests } from '@/data/mockData';
 import { 
   AlertTriangle, 
@@ -19,9 +20,27 @@ import {
 export function IndividualDashboard() {
   const { user } = useAuth();
 
-  // Get user's active requests (mock)
-  const myRequests = mockRequests.slice(0, 2);
-  const nearbyUrgentRequests = mockRequests.filter(r => r.urgency === 'critical' || r.urgency === 'high').slice(0, 3);
+  const [myRequests, setMyRequests] = useState<any[]>([]);
+  const [nearbyUrgentRequests, setNearbyUrgentRequests] = useState<any[]>([]);
+
+  useEffect(() => {
+    const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
+    async function load() {
+      try {
+        const res = await fetch(`${API_BASE}/api/requests`);
+        const data = await res.json();
+        // keep same UI behaviour: take first 2 as user's requests
+        setMyRequests(data.slice(0, 2));
+        setNearbyUrgentRequests(data.filter((r: any) => r.urgency === 'critical' || r.urgency === 'high').slice(0, 3));
+      } catch (err) {
+        console.error('Failed to load requests', err);
+        // fallback to existing mock data
+        setMyRequests(mockRequests.slice(0, 2));
+        setNearbyUrgentRequests(mockRequests.filter(r => r.urgency === 'critical' || r.urgency === 'high').slice(0, 3));
+      }
+    }
+    load();
+  }, []);
 
   return (
     <div className="space-y-8">

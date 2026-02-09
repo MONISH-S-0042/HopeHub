@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatCard } from '@/components/cards/StatCard';
 import { RequestCard } from '@/components/cards/RequestCard';
+import { useEffect, useState } from 'react';
 import { mockRequests, getUrgencyStats, mockPOCs } from '@/data/mockData';
 import { 
   AlertTriangle, 
@@ -26,10 +27,33 @@ import { Progress } from '@/components/ui/progress';
 export function POCDashboard() {
   const { user } = useAuth();
 
-  // Mock data
-  const pendingApprovals = mockRequests.filter(r => r.status === 'pending-verification');
-  const urgencyStats = getUrgencyStats();
-  const totalActive = Object.values(urgencyStats).reduce((a, b) => a + b, 0);
+  const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
+  const [urgencyStats, setUrgencyStats] = useState<any>({ critical: 0, high: 0, medium: 0, low: 0 });
+  const [totalActive, setTotalActive] = useState<number>(0);
+
+  useEffect(() => {
+    const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
+    async function load() {
+      try {
+        const [requestsRes, urgencyRes] = await Promise.all([
+          fetch(`${API_BASE}/api/requests`),
+          fetch(`${API_BASE}/api/stats/urgency`),
+        ]);
+        const requests = await requestsRes.json();
+        const urgency = await urgencyRes.json();
+        setPendingApprovals(requests.filter((r: any) => r.status === 'pending-verification'));
+        setUrgencyStats(urgency);
+        setTotalActive(Object.values(urgency).reduce((a: number, b: number) => a + b, 0));
+      } catch (err) {
+        console.error('Failed to load POC data', err);
+        const urgency = getUrgencyStats();
+        setPendingApprovals(mockRequests.filter(r => r.status === 'pending-verification'));
+        setUrgencyStats(urgency);
+        setTotalActive(Object.values(urgency).reduce((a: number, b: number) => a + b, 0));
+      }
+    }
+    load();
+  }, []);
 
   return (
     <div className="space-y-8">
