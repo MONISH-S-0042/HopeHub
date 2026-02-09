@@ -65,19 +65,66 @@ export default function RequestResource() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // client-side validations
+    if (!formData.category) return toast({ title: 'Validation', description: 'Please select a resource category.' });
+    if (!formData.specificResource) return toast({ title: 'Validation', description: 'Please enter the specific resource.' });
+    const qty = Number(formData.quantity);
+    if (!qty || isNaN(qty) || qty <= 0) return toast({ title: 'Validation', description: 'Please enter a valid quantity.' });
+    if (!formData.address || !formData.district || !formData.state) return toast({ title: 'Validation', description: 'Please provide address, district and state.' });
+
     setIsSubmitting(true);
+    try {
+      const payload = {
+        address: formData.address,
+        landmark: formData.landmark,
+        district: formData.district,
+        state: formData.state,
+        coordinates: formData.coordinates,
+        category: formData.category,
+        specificResource: formData.specificResource,
+        quantity: qty,
+        unit: formData.unit,
+        urgency: formData.urgency,
+        neededBy: formData.neededBy || undefined,
+        deliveryPreference: formData.deliveryPreference,
+        peopleAffected: formData.peopleAffected ? Number(formData.peopleAffected) : undefined,
+        specialRequirements: formData.specialRequirements,
+        pingOrganizations: formData.pingOrganizations,
+      };
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+      const res = await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
 
-    toast({
-      title: 'Request Submitted!',
-      description: formData.urgency === 'critical' 
-        ? 'Your critical request has been auto-approved and is now visible to donors.'
-        : 'Your request is being reviewed and will be active shortly.',
-    });
+      if (res.status === 401) {
+        toast({ title: 'Unauthorized', description: 'Please login to submit requests.' });
+        navigate('/login');
+        return;
+      }
 
-    navigate('/dashboard');
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast({ title: 'Error', description: err?.message || 'Failed to submit request' });
+        return;
+      }
+
+      const created = await res.json();
+      toast({
+        title: 'Request Submitted!',
+        description: created.urgency === 'critical'
+          ? 'Your critical request has been auto-approved and is now visible to donors.'
+          : 'Your request has been created and will be visible shortly.',
+      });
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('submit error', err);
+      toast({ title: 'Error', description: 'Network or server error' });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (authLoading) {
@@ -255,18 +302,10 @@ export default function RequestResource() {
         >
           {URGENCY_LEVELS.map((level) => (
             <div key={level.value}>
-              <RadioGroupItem
-                value={level.value}
-                id={level.value}
-                className="peer sr-only"
-              />
+              <RadioGroupItem value={level.value} id={level.value} className="sr-only" />
               <Label
                 htmlFor={level.value}
-                className={`flex flex-col items-center p-4 rounded-lg border-2 cursor-pointer transition-all
-                  peer-data-[state=checked]:border-${level.color} peer-data-[state=checked]:bg-${level.color}/5
-                  hover:border-${level.color}/50
-                  ${formData.urgency === level.value ? `border-${level.color} bg-${level.color}/5` : 'border-border'}
-                `}
+                className={`flex flex-col items-center p-4 rounded-lg border-2 cursor-pointer transition-all ${formData.urgency === level.value ? 'border-primary bg-primary/5' : 'border-border'}`}
               >
                 <span className="text-lg mb-1">
                   {level.value === 'critical' && '🔴'}

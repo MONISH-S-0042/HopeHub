@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { StatCard } from '@/components/cards/StatCard';
 import { RequestCard } from '@/components/cards/RequestCard';
 import { useEffect, useState } from 'react';
-import { mockRequests } from '@/data/mockData';
 import { 
   AlertTriangle, 
   HeartHandshake, 
@@ -27,16 +26,22 @@ export function IndividualDashboard() {
     const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
     async function load() {
       try {
-        const res = await fetch(`${API_BASE}/api/requests`);
+        // fetch user's own requests for the "My Requests" section
+        const mineRes = await fetch(`${API_BASE}/api/requests/mine`, { credentials: 'include' });
+        const mineData = mineRes.ok ? await mineRes.json() : [];
+        const normalize = (r: any) => ({ ...r, id: r.id || r._id });
+        setMyRequests((mineData || []).map(normalize).slice(0, 4));
+
+        // fetch public requests (server filters out your own)
+        const res = await fetch(`${API_BASE}/api/requests`, { credentials: 'include' });
         const data = await res.json();
-        // keep same UI behaviour: take first 2 as user's requests
-        setMyRequests(data.slice(0, 2));
-        setNearbyUrgentRequests(data.filter((r: any) => r.urgency === 'critical' || r.urgency === 'high').slice(0, 3));
+        const normalized = (data || []).map(normalize);
+        setNearbyUrgentRequests(normalized.filter((r: any) => r.urgency === 'critical' || r.urgency === 'high').slice(0, 3));
       } catch (err) {
         console.error('Failed to load requests', err);
-        // fallback to existing mock data
-        setMyRequests(mockRequests.slice(0, 2));
-        setNearbyUrgentRequests(mockRequests.filter(r => r.urgency === 'critical' || r.urgency === 'high').slice(0, 3));
+        // fallback to empty lists
+        setMyRequests([]);
+        setNearbyUrgentRequests([]);
       }
     }
     load();

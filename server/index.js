@@ -7,9 +7,10 @@ const mongoose = require('mongoose');
 const passport = require('passport');
 const path = require('path');
 
-const { mockRequests, mockDonations, mockOrganizations, mockPOCs, getUrgencyStats, getCategoryStats } = require('./mockData');
+const { mockDonations, mockOrganizations, mockPOCs } = require('./mockData');
 const passportConfig = require('./passportConfig');
 const User = require('./models/User');
+const Request = require('./models/Request');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -92,8 +93,95 @@ app.get('/api/auth/user', (req, res) => {
 });
 
 // Existing mock data endpoints (public)
-app.get('/api/requests', (req, res) => {
-  res.json(mockRequests);
+app.get('/api/requests', async (req, res) => {
+  try {
+    const dbRequests = await Request.find().lean();
+    let results = dbRequests || [];
+
+    // If user is authenticated, filter out their own requests
+    if (req.user && req.user._id) {
+      const userIdStr = String(req.user._id);
+      results = results.filter(r => String(r.userId) !== userIdStr);
+    }
+
+    res.json(results);
+  } catch (err) {
+    console.error('Error fetching requests', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Create a new request (authenticated users only)
+app.post('/api/requests', async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Authentication required' });
+    const {
+      address,
+      landmark,
+      district,
+      state,
+      coordinates,
+      category,
+      specificResource,
+      quantity,
+      unit,
+      urgency,
+      neededBy,
+      deliveryPreference,
+      peopleAffected,
+      specialRequirements,
+    } = req.body;
+
+    // Basic validations
+    if (!category || !specificResource) return res.status(400).json({ message: 'Category and resource are required' });
+    const qty = Number(quantity || 0);
+    if (isNaN(qty) || qty <= 0) return res.status(400).json({ message: 'Quantity must be a positive number' });
+    const allowedUrgency = ['critical', 'high', 'medium', 'low'];
+    if (urgency && !allowedUrgency.includes(urgency)) return res.status(400).json({ message: 'Invalid urgency' });
+    let neededDate = null;
+    if (neededBy) {
+      neededDate = new Date(neededBy);
+      if (isNaN(neededDate.getTime())) return res.status(400).json({ message: 'Invalid neededBy date' });
+    }
+
+    const newReq = new Request({
+      userId: req.user._id,
+      userName: req.user.name,
+      userType: req.user.type,
+      address,
+      landmark,
+      district,
+      state,
+      coordinates,
+      category,
+      specificResource,
+      quantity: qty,
+      unit,
+      urgency: urgency || 'medium',
+      neededBy: neededDate,
+      deliveryPreference,
+      peopleAffected,
+      specialRequirements,
+    });
+
+    await newReq.save();
+    res.status(201).json(newReq);
+  } catch (err) {
+    console.error('Error creating request', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get logged-in user's own requests
+app.get('/api/requests/mine', async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Authentication required' });
+    const mine = await Request.find({ userId: req.user._id }).lean();
+    res.json(mine);
+  } catch (err) {
+    console.error('Error fetching user requests', err);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 app.get('/api/donations', (req, res) => {
@@ -108,12 +196,34 @@ app.get('/api/pocs', (req, res) => {
   res.json(mockPOCs);
 });
 
-app.get('/api/stats/urgency', (req, res) => {
-  res.json(getUrgencyStats());
+app.get('/api/stats/urgency', async (req, res) => {
+  try {
+    const agg = await Request.aggregate([
+      { $match: { status: 'active' } },
+      { $group: { _id: '$urgency', count: { $sum: 1 } } }
+    ]);
+    const map = { critical: 0, high: 0, medium: 0, low: 0 };
+    agg.forEach(item => { map[item._id] = item.count; });
+    res.json(map);
+  } catch (err) {
+    console.error('Error computing urgency stats', err);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
-app.get('/api/stats/categories', (req, res) => {
-  res.json(getCategoryStats());
+app.get('/api/stats/categories', async (req, res) => {
+  try {
+    const agg = await Request.aggregate([
+      { $match: { status: 'active' } },
+      { $group: { _id: '$category', count: { $sum: 1 } } }
+    ]);
+    const stats = {};
+    agg.forEach(item => { stats[item._id] = item.count; });
+    res.json(stats);
+  } catch (err) {
+    console.error('Error computing category stats', err);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 app.get('/', (req, res) => res.send('Carehub API running'));

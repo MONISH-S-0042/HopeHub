@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { StatCard } from '@/components/cards/StatCard';
 import { RequestCard } from '@/components/cards/RequestCard';
 import { useEffect, useState } from 'react';
-import { mockRequests } from '@/data/mockData';
 import { 
   AlertTriangle, 
   HeartHandshake, 
@@ -30,14 +29,14 @@ export function OrganizationDashboard() {
     const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
     async function load() {
       try {
-        const res = await fetch(`${API_BASE}/api/requests`);
+        const res = await fetch(`${API_BASE}/api/requests`, { credentials: 'include' });
         const data = await res.json();
         setPendingHelpRequests(data.slice(0, 2));
         setMatchedRequests(data.filter((r: any) => r.status === 'matched'));
       } catch (err) {
         console.error('Failed to load requests', err);
-        setPendingHelpRequests(mockRequests.slice(0, 2));
-        setMatchedRequests(mockRequests.filter(r => r.status === 'matched'));
+        setPendingHelpRequests([]);
+        setMatchedRequests([]);
       }
     }
     load();

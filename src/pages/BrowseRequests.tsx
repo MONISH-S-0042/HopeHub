@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { mockRequests } from '@/data/mockData';
 import { RESOURCE_CATEGORIES, URGENCY_LEVELS, ResourceCategory, UrgencyLevel } from '@/types';
 import { RequestCard } from '@/components/cards/RequestCard';
 import { Button } from '@/components/ui/button';
@@ -25,9 +24,10 @@ export default function BrowseRequests() {
   const [selectedCategory, setSelectedCategory] = useState<ResourceCategory | 'all'>('all');
   const [selectedUrgency, setSelectedUrgency] = useState<UrgencyLevel | 'all'>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [requests, setRequests] = useState<any[]>([]);
 
-  // Filter requests
-  const filteredRequests = mockRequests.filter(request => {
+  // derive filtered requests from fetched data
+  const filteredRequests = requests.filter(request => {
     if (request.status !== 'active' && request.status !== 'matched') return false;
     if (searchQuery && !request.specificResource.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (selectedCategory !== 'all' && request.category !== selectedCategory) return false;
@@ -36,12 +36,29 @@ export default function BrowseRequests() {
   });
 
   const urgencyCounts = {
-    all: mockRequests.filter(r => r.status === 'active').length,
-    critical: mockRequests.filter(r => r.status === 'active' && r.urgency === 'critical').length,
-    high: mockRequests.filter(r => r.status === 'active' && r.urgency === 'high').length,
-    medium: mockRequests.filter(r => r.status === 'active' && r.urgency === 'medium').length,
-    low: mockRequests.filter(r => r.status === 'active' && r.urgency === 'low').length,
+    all: requests.filter(r => r.status === 'active').length,
+    critical: requests.filter(r => r.status === 'active' && r.urgency === 'critical').length,
+    high: requests.filter(r => r.status === 'active' && r.urgency === 'high').length,
+    medium: requests.filter(r => r.status === 'active' && r.urgency === 'medium').length,
+    low: requests.filter(r => r.status === 'active' && r.urgency === 'low').length,
   };
+
+  // Fetch live requests from server
+  useEffect(() => {
+    const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
+    async function load() {
+      try {
+        const res = await fetch(`${API_BASE}/api/requests`, { credentials: 'include' });
+        const data = await res.json();
+        const normalize = (r: any) => ({ ...r, id: r.id || r._id });
+        setRequests((data || []).map(normalize));
+      } catch (err) {
+        console.error('Failed to load requests', err);
+        setRequests([]);
+      }
+    }
+    load();
+  }, []);
 
   const clearFilters = () => {
     setSearchQuery('');

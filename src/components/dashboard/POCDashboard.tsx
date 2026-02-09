@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { StatCard } from '@/components/cards/StatCard';
 import { RequestCard } from '@/components/cards/RequestCard';
 import { useEffect, useState } from 'react';
-import { mockRequests, getUrgencyStats, mockPOCs } from '@/data/mockData';
 import { 
   AlertTriangle, 
   CheckCircle, 
@@ -30,13 +29,14 @@ export function POCDashboard() {
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
   const [urgencyStats, setUrgencyStats] = useState<any>({ critical: 0, high: 0, medium: 0, low: 0 });
   const [totalActive, setTotalActive] = useState<number>(0);
+  const [recentCritical, setRecentCritical] = useState<any[]>([]);
 
   useEffect(() => {
     const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
     async function load() {
       try {
         const [requestsRes, urgencyRes] = await Promise.all([
-          fetch(`${API_BASE}/api/requests`),
+          fetch(`${API_BASE}/api/requests`, { credentials: 'include' }),
           fetch(`${API_BASE}/api/stats/urgency`),
         ]);
         const requests = await requestsRes.json();
@@ -44,12 +44,13 @@ export function POCDashboard() {
         setPendingApprovals(requests.filter((r: any) => r.status === 'pending-verification'));
         setUrgencyStats(urgency);
         setTotalActive(Object.values(urgency).reduce((a: number, b: number) => a + b, 0));
+        setRecentCritical(requests.filter((r: any) => r.urgency === 'critical').slice(0,3).map((r:any)=>({...r, id: r.id || r._id})));
       } catch (err) {
         console.error('Failed to load POC data', err);
-        const urgency = getUrgencyStats();
-        setPendingApprovals(mockRequests.filter(r => r.status === 'pending-verification'));
-        setUrgencyStats(urgency);
-        setTotalActive(Object.values(urgency).reduce((a: number, b: number) => a + b, 0));
+        setPendingApprovals([]);
+        setUrgencyStats({ critical: 0, high: 0, medium: 0, low: 0 });
+        setTotalActive(0);
+        setRecentCritical([]);
       }
     }
     load();
@@ -318,7 +319,7 @@ export function POCDashboard() {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {mockRequests.filter(r => r.urgency === 'critical').slice(0, 3).map(request => (
+          {recentCritical.map(request => (
             <RequestCard key={request.id} request={request} showDonateButton={false} />
           ))}
         </div>

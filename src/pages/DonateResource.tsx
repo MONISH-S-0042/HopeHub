@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCE_CATEGORIES, ResourceCategory } from '@/types';
-import { mockRequests } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,6 +37,7 @@ export default function DonateResource() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showMatches, setShowMatches] = useState(false);
+  const [matchingRequests, setMatchingRequests] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
     // Donor info (pre-filled)
@@ -66,11 +66,23 @@ export default function DonateResource() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Get matching requests
-  const matchingRequests = mockRequests.filter(r => 
-    r.status === 'active' && 
-    (formData.category ? r.category === formData.category : true)
-  ).slice(0, 5);
+  // Get matching requests from server
+  useEffect(() => {
+    const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:4000';
+    async function loadMatches() {
+      try {
+        const res = await fetch(`${API_BASE}/api/requests`, { credentials: 'include' });
+        const data = await res.json();
+        const normalize = (r: any) => ({ ...r, id: r.id || r._id });
+        const matches = (data || []).filter((r: any) => r.status === 'active' && (formData.category ? r.category === formData.category : true)).slice(0,5).map(normalize);
+        setMatchingRequests(matches);
+      } catch (err) {
+        console.error('Failed to load matching requests', err);
+        setMatchingRequests([]);
+      }
+    }
+    loadMatches();
+  }, [formData.category]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
