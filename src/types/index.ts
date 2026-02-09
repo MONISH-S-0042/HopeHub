@@ -2,19 +2,16 @@ export type UserType = 'individual' | 'organization' | 'poc';
 
 export type UrgencyLevel = 'critical' | 'high' | 'medium' | 'low';
 
-export type ResourceCategory = 
+export type ResourceCategory =
   | 'water-sanitation'
   | 'food-nutrition'
   | 'medical-healthcare'
   | 'shelter-clothing'
-  | 'transportation-fuel'
-  | 'communication-equipment'
-  | 'rescue-safety'
   | 'other';
 
 export type DeliveryPreference = 'pickup' | 'delivery' | 'either';
 
-export type RequestStatus = 
+export type RequestStatus =
   | 'submitted'
   | 'pending-verification'
   | 'approved'
@@ -25,7 +22,7 @@ export type RequestStatus =
   | 'closed'
   | 'rejected';
 
-export type OrganizationType = 
+export type OrganizationType =
   | 'ngo'
   | 'hospital'
   | 'school'
@@ -73,7 +70,6 @@ export interface ResourceRequest {
   // Additional
   peopleAffected: number;
   specialRequirements?: string;
-  photoUrl?: string;
   // Status
   status: RequestStatus;
   createdAt: string;
@@ -98,6 +94,7 @@ export interface Donation {
   specificResource: string;
   quantity: number;
   unit: string;
+  remainingQuantity: number;
   condition: 'new' | 'gently-used' | 'consumable';
   expiryDate?: string;
   availableUntil: string;
@@ -106,9 +103,8 @@ export interface Donation {
   canPickup: boolean;
   deliveryRadius: number;
   // Status
-  status: 'available' | 'matched' | 'in-transit' | 'delivered' | 'closed';
+  status: 'pending' | 'available' | 'matched' | 'in-transit' | 'delivered' | 'completed' | 'cancelled';
   matchedRequestId?: string;
-  photoUrl?: string;
   createdAt: string;
 }
 
@@ -149,9 +145,6 @@ export const RESOURCE_CATEGORIES: { value: ResourceCategory; label: string; icon
   { value: 'food-nutrition', label: 'Food & Nutrition', icon: '🍚' },
   { value: 'medical-healthcare', label: 'Medical & Healthcare', icon: '🏥' },
   { value: 'shelter-clothing', label: 'Shelter & Clothing', icon: '🏠' },
-  { value: 'transportation-fuel', label: 'Transportation & Fuel', icon: '🚗' },
-  { value: 'communication-equipment', label: 'Communication Equipment', icon: '📱' },
-  { value: 'rescue-safety', label: 'Rescue & Safety Equipment', icon: '🛟' },
   { value: 'other', label: 'Other', icon: '📦' },
 ];
 

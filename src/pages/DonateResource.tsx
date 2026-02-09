@@ -18,7 +18,6 @@ import {
   MapPin,
   Package,
   Truck,
-  Upload,
   Loader2,
   CheckCircle,
   Users,
@@ -45,15 +44,15 @@ export default function DonateResource() {
     phone: user?.phone || '',
     email: user?.email || '',
     // Location
-    pickupAddress: '',
-    district: '',
-    state: '',
+    pickupAddress: '', // User model doesn't have address
+    district: user?.district || '',
+    state: user?.state || '',
     // Resource
     category: '' as ResourceCategory | '',
     specificResource: '',
     quantity: '',
     unit: 'units',
-    condition: 'new',
+    condition: 'new' as 'new' | 'gently-used' | 'consumable',
     expiryDate: '',
     availableUntil: '',
     // Delivery
@@ -73,7 +72,11 @@ export default function DonateResource() {
         const res = await fetch(`/api/requests`, { credentials: 'include' });
         const data = await res.json();
         const normalize = (r: any) => ({ ...r, id: r.id || r._id });
-        const matches = (data || []).filter((r: any) => r.status === 'active' && (formData.category ? r.category === formData.category : true)).slice(0, 5).map(normalize);
+        const matches = (data || []).filter((r: any) =>
+          r.status === 'active' &&
+          (formData.category ? r.category === formData.category : true) &&
+          (formData.district ? r.district.toLowerCase() === formData.district.toLowerCase() : true)
+        ).slice(0, 5).map(normalize);
         setMatchingRequests(matches);
       } catch (err) {
         console.error('Failed to load matching requests', err);
@@ -81,32 +84,91 @@ export default function DonateResource() {
       }
     }
     loadMatches();
-  }, [formData.category]);
+  }, [formData.category, formData.district]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      const res = await fetch('/api/donations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          quantity: Number(formData.quantity),
+          deliveryRadius: Number(formData.deliveryRadius)
+        }),
+        credentials: 'include'
+      });
 
-    toast({
-      title: 'Donation Listed!',
-      description: 'Your donation is now visible to requesters. You will be notified when matched.',
-    });
-
-    navigate('/dashboard');
+      if (res.ok) {
+        const result = await res.json();
+        toast({
+          title: result.matchedCount > 0 ? 'Donation Matched!' : 'Donation Listed!',
+          description: result.matchedCount > 0
+            ? `Successfully matched with ${result.matchedCount} urgent requests! Check your dashboard.`
+            : 'Your donation is now visible to requesters in the global feed.',
+        });
+        navigate('/dashboard');
+      } else {
+        const error = await res.json();
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to list donation',
+          variant: 'destructive'
+        });
+      }
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Network error occurred',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDonateToRequest = async (requestId: string) => {
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    toast({
-      title: 'Donation Matched!',
-      description: 'You have been matched with the requester. Coordinate delivery next.',
-    });
+    try {
+      const res = await fetch(`/api/requests/${requestId}/donate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quantity: Number(formData.quantity) || 1, // Default to 1 if not set
+          pickupAddress: formData.pickupAddress,
+          district: formData.district,
+          state: formData.state
+        }),
+        credentials: 'include'
+      });
 
-    navigate('/dashboard');
+      if (res.ok) {
+        toast({
+          title: 'Donation Successful!',
+          description: 'Thank you for your contribution. The requester has been notified.',
+        });
+        navigate('/dashboard');
+      } else {
+        const error = await res.json();
+        toast({
+          title: 'Failed to Donate',
+          description: error.message || 'Something went wrong',
+          variant: 'destructive'
+        });
+      }
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Network error occurred',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (authLoading) {
@@ -229,8 +291,8 @@ export default function DonateResource() {
                         <div
                           key={cat.value}
                           className={`p-3 rounded-lg border-2 cursor-pointer transition-all text-center ${formData.category === cat.value
-                              ? 'border-primary bg-primary/5'
-                              : 'border-border hover:border-primary/50'
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border hover:border-primary/50'
                             }`}
                           onClick={() => {
                             updateFormData('category', cat.value);
@@ -363,16 +425,6 @@ export default function DonateResource() {
                     </div>
                   </div>
 
-                  {/* Photo Upload */}
-                  <div className="space-y-2">
-                    <Label>Photo (Optional)</Label>
-                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                      <Upload className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">
-                        Upload photos of the resources
-                      </p>
-                    </div>
-                  </div>
 
                   <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
                     {isSubmitting ? (

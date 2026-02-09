@@ -20,7 +20,6 @@ import {
   Users,
   Clock,
   Truck,
-  Upload,
   Loader2,
   Building2,
   CheckCircle
@@ -32,10 +31,6 @@ const THRESHOLDS: Record<string, number> = {
   'medical-healthcare': 50,
   'shelter-clothing': 200,
   'water-sanitation': 1000,
-  'rescue-safety': 50,
-  'transportation-fuel': 500,
-  'communication-equipment': 20,
-  'other': 10,
 };
 
 export default function RequestResource() {
@@ -256,8 +251,8 @@ export default function RequestResource() {
             <div
               key={cat.value}
               className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${formData.category === cat.value
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-primary/50'
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-primary/50'
                 }`}
               onClick={() => updateFormData('category', cat.value)}
             >
@@ -468,10 +463,10 @@ export default function RequestResource() {
             <div key={s.num} className="flex items-center">
               <div
                 className={`flex items-center gap-2 px-4 py-2 rounded-full cursor-pointer transition-colors ${step === s.num
-                    ? 'bg-primary text-primary-foreground'
-                    : step > s.num
-                      ? 'bg-success/10 text-success'
-                      : 'bg-muted text-muted-foreground'
+                  ? 'bg-primary text-primary-foreground'
+                  : step > s.num
+                    ? 'bg-success/10 text-success'
+                    : 'bg-muted text-muted-foreground'
                   }`}
                 onClick={() => {
                   if (s.num < step || (s.num === 2 && step === 1) || (s.num === 3 && step === 2 && isUnreasonable())) {
