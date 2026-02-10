@@ -1,4 +1,4 @@
-# HopeHub 🌱
+# HopeHub
 
 HopeHub is a platform designed to connect individuals, organizations, and points of contact (POCs) to collaborate for social good. The goal of HopeHub is to make it easier to create, manage, and participate in initiatives that bring positive change to communities.
 
@@ -22,7 +22,7 @@ HopeHub is a platform designed to connect individuals, organizations, and points
   - Password hashing and authentication
   - RESTful APIs
 
----
+
 
 ## 🛠️ Tech Stack
 
@@ -39,7 +39,4 @@ HopeHub is a platform designed to connect individuals, organizations, and points
 - Mongoose
 - JWT Authentication
 
----
-
-## 📂 Project Structure
 
