@@ -70,6 +70,15 @@ export default function DonateToRequest() {
         e.preventDefault();
         if (!requestId) return;
 
+        const phoneRegex = /^(\+91)?\s?[6-9]\d{9}$/;
+        if (!phoneRegex.test(formData.phone)) {
+            return toast({
+                title: 'Invalid phone number',
+                description: 'Please enter a valid 10-digit Indian phone number.',
+                variant: 'destructive',
+            });
+        }
+
         setIsSubmitting(true);
         try {
             const res = await fetch(`/api/requests/${requestId}/donate`, {

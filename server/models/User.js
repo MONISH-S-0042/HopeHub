@@ -14,6 +14,9 @@ const UserSchema = new mongoose.Schema({
   specialization: String,
   district: String,
   state: String,
+  designation: String,
+  officeHours: String,
+  isAvailable: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
 });
 

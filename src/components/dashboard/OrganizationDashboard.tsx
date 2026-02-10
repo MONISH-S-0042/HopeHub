@@ -9,7 +9,10 @@ import {
   HeartHandshake,
   Bell,
   ArrowRight,
-  CheckCircle
+  CheckCircle,
+  AlertTriangle,
+  Package,
+  Plus
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -70,6 +73,12 @@ export function OrganizationDashboard() {
         </div>
         <div className="flex gap-3">
           <Button variant="outline" asChild>
+            <Link to="/request">
+              <AlertTriangle className="mr-2 h-4 w-4" />
+              Request Resources
+            </Link>
+          </Button>
+          <Button asChild>
             <Link to="/donate">
               <HeartHandshake className="mr-2 h-4 w-4" />
               Donate Resources
@@ -79,7 +88,7 @@ export function OrganizationDashboard() {
       </div>
 
       {/* Primary Actions */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-3 gap-6">
         <Card className="card-elevated hover:shadow-lg transition-shadow group">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-3">
@@ -121,6 +130,28 @@ export function OrganizationDashboard() {
               <Link to="/help-requests">
                 View Requests
                 <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="card-elevated hover:shadow-lg transition-shadow group">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Package className="h-5 w-5 text-primary" />
+              </div>
+              <CardTitle className="text-base">Request Resources</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Request resources for your relief operations. POC verification may be required.
+            </p>
+            <Button className="w-full" size="sm" asChild>
+              <Link to="/request">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Request
               </Link>
             </Button>
           </CardContent>

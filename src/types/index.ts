@@ -117,8 +117,8 @@ export interface Organization {
   address: string;
   district: string;
   state: string;
-  contactEmail: string;
-  contactPhone: string;
+  email: string;
+  phone: string;
   isVerified: boolean;
   impactMetrics: {
     peopleHelped: number;

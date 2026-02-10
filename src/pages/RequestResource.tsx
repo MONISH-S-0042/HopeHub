@@ -36,11 +36,6 @@ export default function RequestResource() {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (user?.type === 'organization') {
-      navigate('/dashboard');
-    }
-  }, [user, navigate]);
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState(1);
@@ -86,6 +81,9 @@ export default function RequestResource() {
   }, []);
 
   const isUnreasonable = () => {
+    const sensitiveKeywords = ['cash', 'money', 'fund', 'finance', 'donation', 'loan'];
+    const isSensitive = sensitiveKeywords.some(k => formData.specificResource.toLowerCase().includes(k));
+    if (isSensitive) return true;
     if (!formData.category) return false;
     const threshold = THRESHOLDS[formData.category] || 100;
     return Number(formData.quantity) > threshold;
@@ -103,6 +101,15 @@ export default function RequestResource() {
     const qty = Number(formData.quantity);
     if (!qty || isNaN(qty) || qty <= 0) return toast({ title: 'Validation', description: 'Please enter a valid quantity.' });
     if (!formData.address || !formData.district || !formData.state) return toast({ title: 'Validation', description: 'Please provide address, district and state.' });
+
+    const phoneRegex = /^(\+91)?\s?[6-9]\d{9}$/;
+    if (!phoneRegex.test(formData.phone)) {
+      return toast({
+        title: 'Invalid phone number',
+        description: 'Please enter a valid 10-digit Indian phone number.',
+        variant: 'destructive',
+      });
+    }
 
     setIsSubmitting(true);
     try {

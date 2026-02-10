@@ -87,6 +87,15 @@ export default function DonateResource() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const phoneRegex = /^(\+91)?\s?[6-9]\d{9}$/;
+    if (!phoneRegex.test(formData.phone)) {
+      return toast({
+        title: 'Invalid phone number',
+        description: 'Please enter a valid 10-digit Indian phone number.',
+        variant: 'destructive',
+      });
+    }
+
     setIsSubmitting(true);
 
     try {

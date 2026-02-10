@@ -54,6 +54,16 @@ export default function Register() {
       return;
     }
 
+    const phoneRegex = /^(\+91)?\s?[6-9]\d{9}$/;
+    if (!phoneRegex.test(formData.phone)) {
+      toast({
+        title: 'Invalid phone number',
+        description: 'Please enter a valid 10-digit Indian phone number (e.g., 9876543210).',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {

@@ -50,11 +50,11 @@ export function OrganizationCard({ organization, onRequestHelp }: OrganizationCa
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <Phone className="h-4 w-4 flex-shrink-0" />
-            <span>{organization.contactPhone}</span>
+            <span>{organization.phone}</span>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <Mail className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">{organization.contactEmail}</span>
+            <span className="truncate">{organization.email}</span>
           </div>
         </div>
       </CardContent>

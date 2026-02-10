@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { mockPOCs } from '@/data/mockData';
-import { ORGANIZATION_TYPES, OrganizationType } from '@/types';
+import { ORGANIZATION_TYPES, OrganizationType, DistrictPOC } from '@/types';
 import { OrganizationCard } from '@/components/cards/OrganizationCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,11 +23,13 @@ import {
 
 export default function Organizations() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [pocSearchQuery, setPocSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<OrganizationType | 'all'>('all');
   const [activeTab, setActiveTab] = useState('organizations');
   const { toast } = useToast();
 
   const [organizations, setOrganizations] = useState<any[]>([]);
+  const [pocs, setPocs] = useState<DistrictPOC[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrg, setSelectedOrg] = useState<any | null>(null);
   const [orgRequests, setOrgRequests] = useState<any[]>([]);
@@ -36,11 +37,18 @@ export default function Organizations() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/organizations', { credentials: 'include' });
-        const data = await res.json();
-        setOrganizations(Array.isArray(data) ? data : []);
+        const [orgsRes, pocsRes] = await Promise.all([
+          fetch('/api/organizations', { credentials: 'include' }),
+          fetch('/api/pocs', { credentials: 'include' })
+        ]);
+
+        const orgsData = await orgsRes.json();
+        const pocsData = await pocsRes.json();
+
+        setOrganizations(Array.isArray(orgsData) ? orgsData : []);
+        setPocs(Array.isArray(pocsData) ? pocsData : []);
       } catch (err) {
-        console.error('Failed to load organizations', err);
+        console.error('Failed to load organizations or POCs', err);
       } finally {
         setIsLoading(false);
       }
@@ -172,54 +180,56 @@ export default function Organizations() {
               <Input
                 placeholder="Search by district or name..."
                 className="pl-10"
+                value={pocSearchQuery}
+                onChange={(e) => setPocSearchQuery(e.target.value)}
               />
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {mockPOCs.map((poc) => (
+              {pocs.filter(poc =>
+                poc.name.toLowerCase().includes(pocSearchQuery.toLowerCase()) ||
+                poc.district.toLowerCase().includes(pocSearchQuery.toLowerCase())
+              ).map((poc) => (
                 <Card key={poc.id} className="card-elevated">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <CardTitle className="text-lg">{poc.name}</CardTitle>
-                          <Shield className="h-4 w-4 text-primary" />
-                        </div>
-                        <p className="text-sm text-muted-foreground">{poc.designation}</p>
+                  <CardHeader className="pb-3 text-center border-b border-border/50 bg-primary/5">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="p-2 rounded-full bg-primary/10">
+                        <Shield className="h-6 w-6 text-primary" />
                       </div>
-                      <Badge
-                        variant={poc.isAvailable ? 'default' : 'secondary'}
-                        className={poc.isAvailable ? 'bg-success' : ''}
-                      >
-                        {poc.isAvailable ? 'Available' : 'Unavailable'}
-                      </Badge>
+                      <CardTitle className="text-xl">{poc.name}</CardTitle>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span>{poc.district}, {poc.state}</span>
+                  <CardContent className="space-y-4 pt-6">
+                    <div className="flex items-center gap-3 text-sm p-2 rounded-lg bg-muted/30">
+                      <div className="p-1.5 rounded-md bg-background shadow-sm">
+                        <MapPin className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">District</span>
+                        <span className="font-medium">{poc.district}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span>{poc.officeHours}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span>{poc.phone}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span className="truncate">{poc.email}</span>
-                    </div>
-                    <div className="pt-3 flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1">
-                        <Phone className="h-4 w-4 mr-1" />
-                        Call
-                      </Button>
-                      <Button size="sm" className="flex-1">
-                        Report Emergency
-                      </Button>
+
+                    <div className="grid grid-cols-1 gap-3">
+                      <div className="flex items-center gap-3 text-sm p-2 rounded-lg bg-muted/30">
+                        <div className="p-1.5 rounded-md bg-background shadow-sm">
+                          <Phone className="h-4 w-4 text-verified" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Contact</span>
+                          <span className="font-medium font-mono">{poc.phone}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 text-sm p-2 rounded-lg bg-muted/30 overflow-hidden">
+                        <div className="p-1.5 rounded-md bg-background shadow-sm flex-shrink-0">
+                          <Mail className="h-4 w-4 text-blue-500" />
+                        </div>
+                        <div className="flex flex-col truncate">
+                          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Email</span>
+                          <span className="font-medium truncate">{poc.email}</span>
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

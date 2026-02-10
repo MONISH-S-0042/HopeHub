@@ -334,10 +334,10 @@ app.post('/api/requests', async (req, res) => {
     const isSensitive = sensitiveKeywords.some(k => lowerSpec.includes(k));
 
     const thresholds = {
-      'food-nutrition': 500,
+      'food-nutrition': 50,
       'medical-healthcare': 50,
-      'shelter-clothing': 200,
-      'water-sanitation': 1000,
+      'shelter-clothing': 50,
+      'water-sanitation': 150,
       'other': 10,
     };
     const threshold = thresholds[category] ?? 100;
@@ -650,16 +650,16 @@ app.get('/api/requests/helped', async (req, res) => {
   }
 });
 
-app.get('/api/donations', (req, res) => {
-  res.json(mockDonations);
-});
-
-app.get('/api/organizations', (req, res) => {
-  res.json(mockOrganizations);
-});
-
-app.get('/api/pocs', (req, res) => {
-  res.json(mockPOCs);
+app.get('/api/pocs', async (req, res) => {
+  try {
+    const pocs = await User.find({ type: 'poc' })
+      .select('name district state email phone designation officeHours isAvailable')
+      .lean();
+    res.json(pocs);
+  } catch (err) {
+    console.error('Error fetching POCs', err);
+    res.status(500).json({ message: 'Failed to fetch POCs' });
+  }
 });
 
 app.get('/api/stats/urgency', async (req, res) => {
