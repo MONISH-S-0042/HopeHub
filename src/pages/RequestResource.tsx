@@ -26,10 +26,10 @@ import {
 import { Navigate } from 'react-router-dom';
 
 const THRESHOLDS: Record<string, number> = {
-  'food-nutrition': 500,
+  'food-nutrition': 50,
   'medical-healthcare': 50,
-  'shelter-clothing': 200,
-  'water-sanitation': 1000,
+  'shelter-clothing': 50,
+  'water-sanitation': 150,
 };
 
 export default function RequestResource() {
