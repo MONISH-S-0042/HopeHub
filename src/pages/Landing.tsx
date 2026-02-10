@@ -259,7 +259,7 @@ export default function Landing() {
               <span className="font-bold text-xl text-primary">HopeHub</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © 2024 HopeHub. All rights reserved.
+              © 2026 HopeHub. All rights reserved.
             </p>
           </div>
         </div>
