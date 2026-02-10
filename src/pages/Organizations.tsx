@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { mockOrganizations, mockPOCs } from '@/data/mockData';
+import { mockPOCs } from '@/data/mockData';
 import { ORGANIZATION_TYPES, OrganizationType } from '@/types';
 import { OrganizationCard } from '@/components/cards/OrganizationCard';
 import { Button } from '@/components/ui/button';
@@ -10,9 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Search, 
-  Building2, 
+import {
+  Search,
+  Building2,
   Shield,
   Phone,
   Mail,
@@ -28,12 +28,44 @@ export default function Organizations() {
   const [activeTab, setActiveTab] = useState('organizations');
   const { toast } = useToast();
 
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedOrg, setSelectedOrg] = useState<any | null>(null);
+  const [orgRequests, setOrgRequests] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch('/api/organizations', { credentials: 'include' });
+        const data = await res.json();
+        setOrganizations(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Failed to load organizations', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    load();
+  }, []);
+
   // Filter organizations
-  const filteredOrganizations = mockOrganizations.filter(org => {
+  const filteredOrganizations = organizations.filter(org => {
     if (searchQuery && !org.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (selectedType !== 'all' && org.type !== selectedType) return false;
     return true;
   });
+
+  const handleOrgClick = async (org: any) => {
+    setSelectedOrg(org);
+    try {
+      // Fetch requests matched by this organization or pinged to it if available
+      const res = await fetch(`/api/requests?orgId=${org._id || org.id}`, { credentials: 'include' });
+      const data = await res.json();
+      setOrgRequests(data || []);
+    } catch (err) {
+      console.error('Failed to load org requests', err);
+    }
+  };
 
   const handleRequestHelp = (org: any) => {
     toast({
@@ -94,22 +126,43 @@ export default function Organizations() {
               </Select>
             </div>
 
-            {/* Results */}
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                Showing {filteredOrganizations.length} organizations
-              </p>
-            </div>
+
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredOrganizations.map((org) => (
-                <OrganizationCard 
-                  key={org.id} 
-                  organization={org}
-                  onRequestHelp={handleRequestHelp}
-                />
+                <div key={org._id || org.id} onClick={() => handleOrgClick(org)} className="cursor-pointer">
+                  <OrganizationCard
+                    organization={org}
+                    onRequestHelp={() => handleRequestHelp(org)}
+                  />
+                </div>
               ))}
             </div>
+
+            {selectedOrg && (
+              <Card className="mt-8 border-primary/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-primary" />
+                    Help from {selectedOrg.name}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {orgRequests.length > 0 ? (
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {orgRequests.map((req: any) => (
+                        <div key={req._id}>
+                          <p className="text-sm font-medium">{req.specificResource}</p>
+                          <p className="text-xs text-muted-foreground">{req.quantity} {req.unit}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">No current public requests linked to this organization.</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* POCs Tab */}
@@ -134,7 +187,7 @@ export default function Organizations() {
                         </div>
                         <p className="text-sm text-muted-foreground">{poc.designation}</p>
                       </div>
-                      <Badge 
+                      <Badge
                         variant={poc.isAvailable ? 'default' : 'secondary'}
                         className={poc.isAvailable ? 'bg-success' : ''}
                       >

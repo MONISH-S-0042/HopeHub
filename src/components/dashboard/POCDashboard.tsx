@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { StatCard } from '@/components/cards/StatCard';
 import { RequestCard } from '@/components/cards/RequestCard';
 import { useEffect, useState } from 'react';
 import {
@@ -15,10 +14,9 @@ import {
   Bell,
   ArrowRight,
   Shield,
-  Users,
   Package,
-  TrendingUp,
-  AlertOctagon
+  AlertOctagon,
+  Building2
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -160,7 +158,7 @@ export function POCDashboard() {
             <div>
               <p className="font-medium text-warning">Pending Approvals</p>
               <p className="text-sm text-muted-foreground">
-                {pendingApprovals.length} requests require your verification
+                There are requests requiring your verification
               </p>
             </div>
           </div>
@@ -173,41 +171,10 @@ export function POCDashboard() {
         </div>
       )}
 
-      {/* Key Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard
-          title="Pending Approvals"
-          value={pendingApprovals.length}
-          subtitle="awaiting verification"
-          icon={Clock}
-          variant="warning"
-        />
-        <StatCard
-          title="Critical Requests"
-          value={urgencyStats.critical}
-          subtitle="need immediate attention"
-          icon={AlertTriangle}
-          variant="critical"
-        />
-        <StatCard
-          title="Active Requests"
-          value={totalActive}
-          subtitle="in your district"
-          icon={Package}
-          variant="primary"
-        />
-        <StatCard
-          title="Fulfillment Rate"
-          value="78%"
-          subtitle="this week"
-          icon={TrendingUp}
-          variant="success"
-          trend={{ value: 5, label: 'vs last week', positive: true }}
-        />
-      </div>
+
 
       {/* Primary Actions */}
-      <div className="grid md:grid-cols-4 gap-4">
+      <div className="grid md:grid-cols-3 gap-4">
         <Link to="#pending">
           <Card className="card-elevated hover:shadow-lg transition-shadow cursor-pointer group">
             <CardContent className="pt-6 text-center">
@@ -215,22 +182,11 @@ export function POCDashboard() {
                 <Clock className="h-6 w-6 text-warning" />
               </div>
               <h3 className="font-semibold mb-1">Verify Requests</h3>
-              <p className="text-xs text-muted-foreground">{pendingApprovals.length} pending</p>
             </CardContent>
           </Card>
         </Link>
 
-        <Link to="/analytics">
-          <Card className="card-elevated hover:shadow-lg transition-shadow cursor-pointer group">
-            <CardContent className="pt-6 text-center">
-              <div className="p-3 rounded-full bg-primary/10 w-fit mx-auto mb-3 group-hover:bg-primary/20 transition-colors">
-                <TrendingUp className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="font-semibold mb-1">Analytics</h3>
-              <p className="text-xs text-muted-foreground">Regional insights</p>
-            </CardContent>
-          </Card>
-        </Link>
+
 
         <Link to="/emergency">
           <Card className="card-elevated hover:shadow-lg transition-shadow cursor-pointer group">
@@ -257,55 +213,13 @@ export function POCDashboard() {
         </Link>
       </div>
 
-      {/* Urgency Distribution */}
-      <Card className="card-elevated">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5" />
-            Request Urgency Distribution
-          </CardTitle>
-          <CardDescription>Active requests by urgency level in your district</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="w-24 text-sm font-medium text-critical">Critical</div>
-              <div className="flex-1">
-                <Progress value={(urgencyStats.critical / totalActive) * 100} className="h-3 bg-muted [&>div]:bg-critical" />
-              </div>
-              <div className="w-12 text-sm text-right">{urgencyStats.critical}</div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="w-24 text-sm font-medium text-high-urgency">High</div>
-              <div className="flex-1">
-                <Progress value={(urgencyStats.high / totalActive) * 100} className="h-3 bg-muted [&>div]:bg-high-urgency" />
-              </div>
-              <div className="w-12 text-sm text-right">{urgencyStats.high}</div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="w-24 text-sm font-medium text-medium-urgency">Medium</div>
-              <div className="flex-1">
-                <Progress value={(urgencyStats.medium / totalActive) * 100} className="h-3 bg-muted [&>div]:bg-medium-urgency" />
-              </div>
-              <div className="w-12 text-sm text-right">{urgencyStats.medium}</div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="w-24 text-sm font-medium text-low-urgency">Low</div>
-              <div className="flex-1">
-                <Progress value={(urgencyStats.low / totalActive) * 100} className="h-3 bg-muted [&>div]:bg-low-urgency" />
-              </div>
-              <div className="w-12 text-sm text-right">{urgencyStats.low}</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* Pending Approvals */}
       <div id="pending">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-semibold">Pending Approvals</h2>
-            <Badge variant="secondary">{pendingApprovals.length} pending</Badge>
           </div>
           <Button variant="ghost" size="sm">
             View All
@@ -335,7 +249,7 @@ export function POCDashboard() {
                           {request.district}, {request.state}
                         </span>
                         <span className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
+                          <Building2 className="h-4 w-4" />
                           {request.peopleAffected} people affected
                         </span>
                       </div>

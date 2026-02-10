@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link, Navigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCE_CATEGORIES, ResourceCategory } from '@/types';
@@ -24,7 +24,6 @@ import {
   Clock,
   ArrowRight
 } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function DonateResource() {
@@ -491,11 +490,12 @@ export default function DonateResource() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleDonateToRequest(request.id)}
-                            disabled={isSubmitting}
+                            asChild
                           >
-                            Donate
-                            <ArrowRight className="ml-1 h-3 w-3" />
+                            <Link to={`/donate-to/${request.id}`}>
+                              Donate
+                              <ArrowRight className="ml-1 h-3 w-3" />
+                            </Link>
                           </Button>
                         </div>
                       </div>

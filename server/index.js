@@ -15,6 +15,164 @@ const Request = require('./models/Request');
 const Donation = require('./models/Donation');
 const Notification = require('./models/Notification');
 
+/* Helper: Reverse Allocation (Request -> Existing Supplies) */
+async function matchRequestWithSupplies(newReq) {
+  if (newReq.status !== 'active') return;
+  try {
+    const availableSupplies = await Donation.find({
+      category: newReq.category,
+      district: newReq.district,
+      status: 'available',
+      remainingQuantity: { $gt: 0 }
+    }).sort({ createdAt: 1 });
+
+    let needed = newReq.quantity - (newReq.fulfilledQuantity || 0);
+    let matchedCount = 0;
+
+    for (const donation of availableSupplies) {
+      if (needed <= 0) break;
+
+      const available = donation.remainingQuantity;
+      const allocate = Math.min(needed, available);
+
+      donation.remainingQuantity -= allocate;
+      if (donation.remainingQuantity === 0) donation.status = 'completed';
+      await donation.save();
+
+      await User.findByIdAndUpdate(donation.donorId, { $inc: { trustScore: 5 } });
+
+      const matchRecord = new Donation({
+        requestId: newReq._id,
+        donorId: donation.donorId,
+        donorName: donation.donorName,
+        donorType: donation.donorType,
+        category: donation.category,
+        specificResource: donation.specificResource,
+        quantity: allocate,
+        unit: donation.unit,
+        remainingQuantity: 0,
+        pickupAddress: donation.pickupAddress,
+        district: donation.district,
+        state: donation.state,
+        status: 'completed'
+      });
+      await matchRecord.save();
+
+      newReq.fulfilledQuantity = (newReq.fulfilledQuantity || 0) + allocate;
+      if (!newReq.matchedDonations) newReq.matchedDonations = [];
+      newReq.matchedDonations.push(matchRecord._id);
+
+      needed -= allocate;
+      matchedCount++;
+
+      try {
+        await new Notification({
+          userId: donation.donorId,
+          title: 'Your donation was matched!',
+          message: `Your available supply of ${donation.specificResource} was auto-matched to a new request for ${allocate} ${donation.unit}.`,
+          type: 'donation',
+          link: '/dashboard'
+        }).save();
+      } catch (nErr) { console.error(nErr); }
+    }
+
+    if (newReq.fulfilledQuantity >= newReq.quantity) newReq.status = 'matched';
+    if (matchedCount > 0) {
+      await newReq.save();
+      try {
+        await new Notification({
+          userId: newReq.userId,
+          title: 'Request instantly matched!',
+          message: `We found ${matchedCount} available supplies that match your request. Check your dashboard.`,
+          type: 'fulfillment',
+          link: '/dashboard'
+        }).save();
+      } catch (nErr) { console.error(nErr); }
+    }
+  } catch (matchErr) {
+    console.error('Reverse matching error:', matchErr);
+  }
+}
+
+/* Helper: Forward Allocation (Donation -> Active Requests) */
+async function matchDonationWithRequests(donation) {
+  try {
+    const candidateRequests = await Request.find({
+      category: donation.category,
+      status: 'active',
+      district: donation.district
+    });
+
+    const urgencyMap = { critical: 4, high: 3, medium: 2, low: 1 };
+    candidateRequests.sort((a, b) => {
+      const urgencyB = urgencyMap[b.urgency] || 0;
+      const urgencyA = urgencyMap[a.urgency] || 0;
+      if (urgencyB !== urgencyA) return urgencyB - urgencyA;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
+
+    let matchedCount = 0;
+    let remainingQty = donation.remainingQuantity;
+
+    for (const reqDoc of candidateRequests) {
+      if (remainingQty <= 0) break;
+
+      const needed = reqDoc.quantity - (reqDoc.fulfilledQuantity || 0);
+      if (needed <= 0) continue;
+
+      const allocate = Math.min(remainingQty, needed);
+      if (isNaN(allocate) || allocate <= 0) continue;
+
+      reqDoc.fulfilledQuantity = (reqDoc.fulfilledQuantity || 0) + allocate;
+      if (reqDoc.fulfilledQuantity >= reqDoc.quantity) reqDoc.status = 'matched';
+
+      const matchRecord = new Donation({
+        requestId: reqDoc._id,
+        donorId: donation.donorId,
+        donorName: donation.donorName,
+        donorType: donation.donorType,
+        category: donation.category,
+        specificResource: donation.specificResource,
+        quantity: allocate,
+        unit: donation.unit,
+        remainingQuantity: 0,
+        pickupAddress: donation.pickupAddress,
+        district: donation.district,
+        state: donation.state,
+        status: 'completed'
+      });
+      await matchRecord.save();
+
+      if (!reqDoc.matchedDonations) reqDoc.matchedDonations = [];
+      reqDoc.matchedDonations.push(matchRecord._id);
+      await reqDoc.save();
+
+      remainingQty -= allocate;
+      matchedCount++;
+
+      try {
+        await new Notification({
+          userId: reqDoc.userId,
+          title: 'Your request was auto-matched!',
+          message: `An auto-allocation matched ${allocate} ${donation.unit} of ${donation.specificResource} to your request from ${donation.donorName}.`,
+          type: 'fulfillment',
+          link: '/dashboard'
+        }).save();
+      } catch (notifErr) { console.error('Auto-allocation notification error:', notifErr); }
+    }
+
+    donation.remainingQuantity = remainingQty;
+    if (remainingQty === 0) donation.status = 'completed';
+    await donation.save();
+
+    if (matchedCount > 0) {
+      await User.findByIdAndUpdate(donation.donorId, { $inc: { trustScore: matchedCount * 5 } });
+    }
+  } catch (err) {
+    console.error('Forward matching error:', err);
+  }
+}
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 
@@ -46,7 +204,7 @@ app.use(passport.session());
 // Auth routes
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { name, email, password, type, phone, district, state } = req.body;
+    const { name, email, password, type, phone, district, state, organizationName, organizationType, specialization } = req.body;
     if (!email || !password || !name) return res.status(400).json({ message: 'Missing fields' });
     if (typeof password !== 'string' || password.length < 6) return res.status(400).json({ message: 'Password too short' });
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -57,7 +215,17 @@ app.post('/api/auth/register', async (req, res) => {
     }
     const exists = await User.findOne({ email });
     if (exists) return res.status(409).json({ message: 'Email already registered' });
-    const user = new User({ name, email, type, phone, district, state });
+    const user = new User({
+      name,
+      email,
+      type,
+      phone,
+      district,
+      state,
+      organizationName,
+      organizationType,
+      specialization
+    });
     await user.setPassword(password);
     await user.save();
     req.login(user, err => {
@@ -98,11 +266,23 @@ app.get('/api/auth/user', (req, res) => {
 // Existing mock data endpoints (public)
 app.get('/api/requests', async (req, res) => {
   try {
-    const dbRequests = await Request.find().lean();
+    const { orgId } = req.query;
+    let query = {};
+
+    if (orgId) {
+      query = {
+        $or: [
+          { userId: orgId },
+          { pingedOrganizations: orgId }
+        ]
+      };
+    }
+
+    const dbRequests = await Request.find(query).lean();
     let results = dbRequests || [];
 
-    // If user is authenticated, filter out their own requests
-    if (req.user && req.user._id) {
+    // If no specific org filter, and user is authenticated, filter out their own requests from the general list
+    if (!orgId && req.user && req.user._id) {
       const userIdStr = String(req.user._id);
       results = results.filter(r => String(r.userId) !== userIdStr);
     }
@@ -133,6 +313,7 @@ app.post('/api/requests', async (req, res) => {
       deliveryPreference,
       peopleAffected,
       specialRequirements,
+      pingOrganizations,
     } = req.body;
 
     // Basic validations
@@ -192,6 +373,7 @@ app.post('/api/requests', async (req, res) => {
       deliveryPreference,
       peopleAffected,
       specialRequirements,
+      pingedOrganizations: pingOrganizations || [],
       status,
       assignedPOC,
       notifiedPOC: assignedPOC ? false : true,
@@ -199,93 +381,24 @@ app.post('/api/requests', async (req, res) => {
 
     await newReq.save();
 
+    // Create notifications for each targeted organization
+    if (pingOrganizations && pingOrganizations.length > 0) {
+      for (const orgId of pingOrganizations) {
+        try {
+          await new Notification({
+            userId: orgId,
+            title: 'New Help Request Ping!',
+            message: `${req.user.name} has specifically requested help from your organization.`,
+            type: 'ping',
+            link: '/dashboard'
+          }).save();
+        } catch (nErr) { console.error('Ping notification error:', nErr); }
+      }
+    }
+
     // Reverse Auto-Allocation (Supply -> New Request)
     if (newReq.status === 'active') {
-      try {
-        const availableSupplies = await Donation.find({
-          category: newReq.category,
-          district: newReq.district,
-          status: 'available',
-          remainingQuantity: { $gt: 0 }
-        }).sort({ createdAt: 1 }); // Oldest supplies first
-
-        let needed = newReq.quantity;
-        let matchedCount = 0;
-
-        for (const donation of availableSupplies) {
-          if (needed <= 0) break;
-
-          const available = donation.remainingQuantity;
-          const allocate = Math.min(needed, available);
-
-          // Update donation
-          donation.remainingQuantity -= allocate;
-          if (donation.remainingQuantity === 0) {
-            donation.status = 'completed';
-          }
-          await donation.save();
-
-          // Update donor trust score
-          await User.findByIdAndUpdate(donation.donorId, { $inc: { trustScore: 5 } });
-
-          // Create a specific donation record for this match so it shows up in history
-          const matchRecord = new Donation({
-            requestId: newReq._id,
-            donorId: donation.donorId,
-            donorName: donation.donorName,
-            donorType: donation.donorType,
-            category: donation.category,
-            specificResource: donation.specificResource,
-            quantity: allocate,
-            unit: donation.unit,
-            remainingQuantity: 0,
-            pickupAddress: donation.pickupAddress,
-            district: donation.district,
-            state: donation.state,
-            status: 'completed'
-          });
-          await matchRecord.save();
-
-          // Update request
-          newReq.fulfilledQuantity = (newReq.fulfilledQuantity || 0) + allocate;
-          if (!newReq.matchedDonations) newReq.matchedDonations = [];
-          newReq.matchedDonations.push(matchRecord._id);
-
-          needed -= allocate;
-          matchedCount++;
-
-          // Notify Donor
-          try {
-            await new Notification({
-              userId: donation.donorId,
-              title: 'Your donation was matched!',
-              message: `Your available supply of ${donation.specificResource} was auto-matched to a new request for ${allocate} ${donation.unit}.`,
-              type: 'donation',
-              link: '/dashboard'
-            }).save();
-          } catch (nErr) { console.error(nErr); }
-        }
-
-        if (newReq.fulfilledQuantity >= newReq.quantity) {
-          newReq.status = 'matched';
-        }
-
-        if (matchedCount > 0) {
-          await newReq.save();
-          // Notify Requester (Local notify is faster, but this for persistence)
-          try {
-            await new Notification({
-              userId: newReq.userId,
-              title: 'Request instantly matched!',
-              message: `We found ${matchedCount} available supplies that match your request. Check your dashboard.`,
-              type: 'fulfillment',
-              link: '/dashboard'
-            }).save();
-          } catch (nErr) { console.error(nErr); }
-        }
-      } catch (matchErr) {
-        console.error('Reverse matching error:', matchErr);
-      }
+      await matchRequestWithSupplies(newReq);
     }
 
     res.status(201).json(newReq);
@@ -449,88 +562,10 @@ app.post('/api/donations', async (req, res) => {
 
     // Smart Allocation Core
     console.log(`Starting smart allocation for ${remainingQty} ${unit} of ${specificResource} in ${district}`);
-    const candidateRequests = await Request.find({
-      category,
-      status: 'active',
-      district: district
-    });
+    await matchDonationWithRequests(donation);
 
-    const urgencyMap = { critical: 4, high: 3, medium: 2, low: 1 };
-    candidateRequests.sort((a, b) => {
-      const urgencyB = urgencyMap[b.urgency] || 0;
-      const urgencyA = urgencyMap[a.urgency] || 0;
-      if (urgencyB !== urgencyA) return urgencyB - urgencyA;
-      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-    });
-
-    let matchedCount = 0;
-    const matches = [];
-
-    for (const reqDoc of candidateRequests) {
-      if (remainingQty <= 0) break;
-
-      const needed = reqDoc.quantity - (reqDoc.fulfilledQuantity || 0);
-      if (needed <= 0) continue;
-
-      const allocate = Math.min(remainingQty, needed);
-      if (isNaN(allocate) || allocate <= 0) continue;
-
-      reqDoc.fulfilledQuantity = (reqDoc.fulfilledQuantity || 0) + allocate;
-      if (reqDoc.fulfilledQuantity >= reqDoc.quantity) {
-        reqDoc.status = 'matched';
-      }
-
-      // Create a specific donation record for this match so it shows up in history
-      const matchRecord = new Donation({
-        requestId: reqDoc._id,
-        donorId: req.user._id,
-        donorName: req.user.name,
-        donorType: req.user.type,
-        category: donation.category,
-        specificResource: donation.specificResource,
-        quantity: allocate,
-        unit: donation.unit,
-        remainingQuantity: 0,
-        pickupAddress: donation.pickupAddress,
-        district: donation.district,
-        state: donation.state,
-        status: 'completed'
-      });
-      await matchRecord.save();
-
-      if (!reqDoc.matchedDonations) reqDoc.matchedDonations = [];
-      reqDoc.matchedDonations.push(matchRecord._id);
-      await reqDoc.save();
-
-      remainingQty -= allocate;
-      matchedCount++;
-      matches.push({ requestId: reqDoc._id, allocated: allocate });
-
-      // Create notification for requester
-      try {
-        await new Notification({
-          userId: reqDoc.userId,
-          title: 'Your request was auto-matched!',
-          message: `An auto-allocation matched ${allocate} ${unit || 'units'} of ${specificResource} to your request from ${req.user.name}.`,
-          type: 'fulfillment',
-          link: '/dashboard'
-        }).save();
-      } catch (notifErr) {
-        console.error('Auto-allocation notification error:', notifErr);
-      }
-    }
-
-    donation.remainingQuantity = remainingQty;
-    if (remainingQty === 0) donation.status = 'completed';
-
-    await donation.save();
-
-    if (matchedCount > 0) {
-      await User.findByIdAndUpdate(req.user._id, { $inc: { trustScore: matchedCount * 5 } });
-    }
-
-    console.log(`Donation listed successfully. Matched with ${matchedCount} requests.`);
-    res.status(201).json({ donation, matchedCount, matches });
+    console.log(`Donation listed successfully.`);
+    res.status(201).json({ donation });
   } catch (err) {
     console.error('General donation error:', err);
     res.status(500).json({ message: 'Server error: ' + err.message });
@@ -571,6 +606,46 @@ app.get('/api/requests/mine', async (req, res) => {
     res.json(mine);
   } catch (err) {
     console.error('Error fetching user requests', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Organization specific endpoints
+app.get('/api/organizations', async (req, res) => {
+  try {
+    // Query database for users with type 'organization'
+    const orgs = await User.find({ type: 'organization' })
+      .select('name district state phone email type specialization description impactMetrics isVerified') // Include fields needed by frontend
+      .lean();
+    res.json(orgs);
+  } catch (err) {
+    console.error('Error fetching organizations', err);
+    res.status(500).json({ message: 'Failed to fetch organizations' });
+  }
+});
+
+app.get('/api/requests/pinged', async (req, res) => {
+  try {
+    if (!req.user || req.user.type !== 'organization') return res.status(401).json({ message: 'Organization required' });
+    const pinged = await Request.find({
+      pingedOrganizations: req.user._id,
+      status: 'active'
+    }).sort({ createdAt: -1 }).lean();
+    res.json(pinged);
+  } catch (err) {
+    console.error('Error fetching pinged requests', err);
+    res.status(500).json({ message: 'Error fetching pinged requests' });
+  }
+});
+
+app.get('/api/requests/helped', async (req, res) => {
+  try {
+    if (!req.user || req.user.type !== 'organization') return res.status(401).json({ message: 'Organization required' });
+    const helpedDonations = await Donation.find({ donorId: req.user._id, requestId: { $exists: true } }).distinct('requestId');
+    const helped = await Request.find({ _id: { $in: helpedDonations } }).sort({ updatedAt: -1 }).lean();
+    res.json(helped);
+  } catch (err) {
+    console.error('Error fetching helped requests', err);
     res.status(500).json({ message: 'Server error' });
   }
 });

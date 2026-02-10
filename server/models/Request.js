@@ -24,6 +24,7 @@ const RequestSchema = new mongoose.Schema({
   status: { type: String, enum: ['active', 'pending-verification', 'matched', 'fulfilled', 'cancelled', 'rejected'], default: 'active' },
   fulfilledQuantity: { type: Number, default: 0 },
   matchedDonations: [{ type: String }],
+  pingedOrganizations: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   assignedPOC: {
     id: String,
     name: String,

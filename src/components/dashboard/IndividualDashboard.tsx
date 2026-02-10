@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { StatCard } from '@/components/cards/StatCard';
 import { RequestCard } from '@/components/cards/RequestCard';
 import { DonationDetailsModal } from '@/components/modals/DonationDetailsModal';
 import { useEffect, useState } from 'react';
@@ -11,8 +10,6 @@ import {
   HeartHandshake,
   Package,
   MapPin,
-  Clock,
-  Star,
   ArrowRight,
   Plus
 } from 'lucide-react';
@@ -84,37 +81,7 @@ export function IndividualDashboard() {
         </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard
-          title="Trust Score"
-          value={user?.trustScore || 0}
-          subtitle="out of 100"
-          icon={Star}
-          variant="primary"
-        />
-        <StatCard
-          title="Active Requests"
-          value={2}
-          subtitle="pending fulfillment"
-          icon={Package}
-          variant="warning"
-        />
-        <StatCard
-          title="Donations Made"
-          value={5}
-          subtitle="resources donated"
-          icon={HeartHandshake}
-          variant="success"
-        />
-        <StatCard
-          title="Nearby Urgent"
-          value={nearbyUrgentRequests.length}
-          subtitle="critical requests"
-          icon={AlertTriangle}
-          variant="critical"
-        />
-      </div>
+
 
       {/* Primary Actions */}
       <div className="grid md:grid-cols-2 gap-6">

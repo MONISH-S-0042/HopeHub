@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/context/AuthContext';
 import { RESOURCE_CATEGORIES, URGENCY_LEVELS, ResourceCategory, UrgencyLevel, DeliveryPreference } from '@/types';
-import { mockOrganizations } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,6 +35,12 @@ const THRESHOLDS: Record<string, number> = {
 export default function RequestResource() {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user?.type === 'organization') {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState(1);
@@ -64,6 +69,21 @@ export default function RequestResource() {
     // Organizations to ping
     pingOrganizations: [] as string[],
   });
+
+  const [organizations, setOrganizations] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function fetchOrgs() {
+      try {
+        const res = await fetch('/api/organizations', { credentials: 'include' });
+        const data = await res.json();
+        setOrganizations(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Failed to fetch organizations', err);
+      }
+    }
+    fetchOrgs();
+  }, []);
 
   const isUnreasonable = () => {
     if (!formData.category) return false;
@@ -406,31 +426,36 @@ export default function RequestResource() {
           Select organizations to directly notify about your request
         </p>
         <div className="grid md:grid-cols-2 gap-3">
-          {mockOrganizations.slice(0, 4).map((org) => (
-            <div
-              key={org.id}
-              className="flex items-start gap-3 p-3 rounded-lg border border-border"
-            >
-              <Checkbox
-                id={org.id}
-                checked={formData.pingOrganizations.includes(org.id)}
-                onCheckedChange={(checked) => {
-                  if (checked) {
-                    updateFormData('pingOrganizations', [...formData.pingOrganizations, org.id]);
-                  } else {
-                    updateFormData('pingOrganizations', formData.pingOrganizations.filter(id => id !== org.id));
-                  }
-                }}
-              />
-              <label htmlFor={org.id} className="cursor-pointer">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm">{org.name}</span>
-                  {org.isVerified && <CheckCircle className="h-3 w-3 text-verified" />}
-                </div>
-                <p className="text-xs text-muted-foreground">{org.specialization}</p>
-              </label>
-            </div>
-          ))}
+          {organizations.length > 0 ? (
+            organizations.slice(0, 6).map((org) => (
+              <div
+                key={org._id || org.id}
+                className="flex items-start gap-3 p-3 rounded-lg border border-border"
+              >
+                <Checkbox
+                  id={org._id || org.id}
+                  checked={formData.pingOrganizations.includes(org._id || org.id)}
+                  onCheckedChange={(checked) => {
+                    const id = org._id || org.id;
+                    if (checked) {
+                      updateFormData('pingOrganizations', [...formData.pingOrganizations, id]);
+                    } else {
+                      updateFormData('pingOrganizations', formData.pingOrganizations.filter(pingId => pingId !== id));
+                    }
+                  }}
+                />
+                <label htmlFor={org._id || org.id} className="cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm">{org.name}</span>
+                    {org.isVerified && <CheckCircle className="h-3 w-3 text-verified" />}
+                  </div>
+                  <p className="text-xs text-muted-foreground line-clamp-1">{org.specialization || org.type}</p>
+                </label>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-muted-foreground italic col-span-2">No registered organizations available to ping.</p>
+          )}
         </div>
       </div>
     </div>

@@ -30,10 +30,8 @@ export default function Register() {
     organizationName: '',
     organizationType: '',
     specialization: '',
-    // POC specific
     district: '',
     state: '',
-    governmentId: '',
   });
 
   const { register } = useAuth();
@@ -69,6 +67,8 @@ export default function Register() {
           organizationName: formData.organizationName,
           organizationType: formData.organizationType as any,
           specialization: formData.specialization,
+          district: formData.district,
+          state: formData.state,
         }),
         ...(userType === 'poc' && {
           district: formData.district,
@@ -195,6 +195,28 @@ export default function Register() {
           onChange={(e) => updateFormData('specialization', e.target.value)}
         />
       </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="district">District</Label>
+          <Input
+            id="district"
+            placeholder="e.g., Chennai"
+            value={formData.district}
+            onChange={(e) => updateFormData('district', e.target.value)}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="state">State</Label>
+          <Input
+            id="state"
+            placeholder="e.g., Tamil Nadu"
+            value={formData.state}
+            onChange={(e) => updateFormData('state', e.target.value)}
+            required
+          />
+        </div>
+      </div>
       <div className="space-y-2">
         <Label htmlFor="name">Contact Person Name</Label>
         <Input
@@ -316,16 +338,7 @@ export default function Register() {
           required
         />
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="governmentId">Government ID Number</Label>
-        <Input
-          id="governmentId"
-          placeholder="Enter your government ID"
-          value={formData.governmentId}
-          onChange={(e) => updateFormData('governmentId', e.target.value)}
-          required
-        />
-      </div>
+
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>

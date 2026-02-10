@@ -13,6 +13,7 @@ import DonateResource from "./pages/DonateResource";
 import BrowseRequests from "./pages/BrowseRequests";
 import DonateToRequest from "./pages/DonateToRequest";
 import Organizations from "./pages/Organizations";
+import HelpRequests from "./pages/HelpRequests";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/donate-to/:requestId" element={<DonateToRequest />} />
             <Route path="/browse" element={<BrowseRequests />} />
             <Route path="/organizations" element={<Organizations />} />
+            <Route path="/help-requests" element={<HelpRequests />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
