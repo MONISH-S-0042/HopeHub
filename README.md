@@ -37,6 +37,6 @@ HopeHub is a platform designed to connect individuals, organizations, and points
 - Express.js
 - MongoDB
 - Mongoose
-- JWT Authentication
+- Passport(npm) Authentication
 
 
