@@ -24,7 +24,7 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await login(email, password, userType);
+      await login(email, password);
       toast({
         title: 'Welcome back!',
         description: 'You have successfully logged in.',
@@ -69,10 +69,7 @@ export default function Login() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-hero-gradient">
-              <AlertTriangle className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="font-bold text-xl">CareConnect</span>
+            <span className="font-bold text-2xl text-primary">HopeHub</span>
           </Link>
           <h1 className="text-2xl font-bold">Welcome back</h1>
           <p className="text-muted-foreground mt-1">Sign in to your account</p>

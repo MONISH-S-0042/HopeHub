@@ -61,11 +61,8 @@ export function Header() {
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-6">
           <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-hero-gradient">
-              <AlertTriangle className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="hidden font-bold text-lg sm:inline-block">
-              CareConnect
+            <span className="hidden font-bold text-xl sm:inline-block tracking-tight text-primary">
+              HopeHub
             </span>
           </Link>
 

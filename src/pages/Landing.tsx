@@ -124,7 +124,7 @@ export default function Landing() {
       <section className="py-20">
         <div className="container">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Who Can Use CareConnect?</h2>
+            <h2 className="text-3xl font-bold mb-4">Who Can Use HopeHub?</h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
               Our platform serves individuals, organizations, and government coordinators to create a comprehensive relief network.
             </p>
@@ -256,13 +256,10 @@ export default function Landing() {
         <div className="container">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-hero-gradient">
-                <AlertTriangle className="h-4 w-4 text-primary-foreground" />
-              </div>
-              <span className="font-bold">CareConnect</span>
+              <span className="font-bold text-xl text-primary">HopeHub</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © 2024 CareConnect. All rights reserved.
+              © 2024 HopeHub. All rights reserved.
             </p>
           </div>
         </div>

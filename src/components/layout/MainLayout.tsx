@@ -16,7 +16,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         <div className="container">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-muted-foreground">
-              © 2024 CareConnect. All rights reserved.
+              © 2024 HopeHub. All rights reserved.
             </p>
             <div className="flex items-center gap-6">
               <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
